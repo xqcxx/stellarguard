@@ -172,6 +172,10 @@ impl GovernanceContract {
             return Err(Error::AlreadyInitialized);
         }
 
+        if quorum_percent < 1 || quorum_percent > 100 {
+            return Err(Error::InvalidProposal);
+        }
+
         admin.require_auth();
 
         env.storage().instance().set(&DataKey::Initialized, &true);
