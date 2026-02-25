@@ -723,12 +723,12 @@ mod test {
     use super::*;
     use soroban_sdk::testutils::Address as _;
     use soroban_sdk::testutils::Events as _;
-    use soroban_sdk::{vec, Env, IntoVal, Val};
+    use soroban_sdk::{vec, Env, IntoVal, TryIntoVal, Val};
 
     fn setup_contract() -> (Env, Address, Address, TreasuryContractClient<'static>) {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register(TreasuryContract, ());
+        let contract_id = env.register_contract(None, TreasuryContract);
         let client = TreasuryContractClient::new(&env, &contract_id);
         let admin = Address::generate(&env);
         (env, admin, contract_id, client)
@@ -801,6 +801,47 @@ mod test {
     }
 
     #[test]
+    fn test_get_signers() {
+        let (env, admin, _contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        let signer3 = Address::generate(&env);
+        let signers =
+            Vec::from_array(&env, [signer1.clone(), signer2.clone(), signer3.clone()]);
+
+        client.initialize(&admin, &2, &signers);
+
+        let fetched = client.get_signers();
+        assert_eq!(fetched.len(), 3);
+        assert_eq!(fetched.get(0).unwrap(), signer1);
+        assert_eq!(fetched.get(1).unwrap(), signer2);
+        assert_eq!(fetched.get(2).unwrap(), signer3);
+    }
+
+    #[test]
+    fn test_get_transaction() {
+        let (env, admin, _contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone(), signer2.clone()]);
+        client.initialize(&admin, &2, &signers);
+
+        client.deposit(&signer1, &5_000_000);
+
+        let recipient = Address::generate(&env);
+        let tx_id =
+            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &symbol_short!("rent"));
+
+        let tx = client.get_transaction(&tx_id);
+        assert_eq!(tx.id, tx_id);
+        assert_eq!(tx.to, recipient);
+        assert_eq!(tx.amount, 1_000_000);
+        assert_eq!(tx.executed, false);
+    }
+
+    #[test]
     fn test_init_emits_event() {
         let (env, admin, contract_id, client) = setup_contract();
 
@@ -820,8 +861,8 @@ mod test {
             symbol_short!("init").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let expected_data: Val = (admin, 2u32, 3u32).into_val(&env);
-        assert_eq!(event.2, expected_data);
+        let data: (Address, u32, u32) = event.2.try_into_val(&env).unwrap();
+        assert_eq!(data, (admin, 2u32, 3u32));
     }
 
     #[test]
@@ -844,8 +885,8 @@ mod test {
             symbol_short!("deposit").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let expected_data: Val = (depositor, 1_000_000_i128, 1_000_000_i128).into_val(&env);
-        assert_eq!(event.2, expected_data);
+        let data: (Address, i128, i128) = event.2.try_into_val(&env).unwrap();
+        assert_eq!(data, (depositor, 1_000_000_i128, 1_000_000_i128));
     }
 
     #[test]
@@ -901,8 +942,8 @@ mod test {
             symbol_short!("approve").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let expected_data: Val = (tx_id, signer2, approval_count).into_val(&env);
-        assert_eq!(event.2, expected_data);
+        let data: (u64, Address, u32) = event.2.try_into_val(&env).unwrap();
+        assert_eq!(data, (tx_id, signer2, approval_count));
     }
 
     #[test]
