@@ -384,11 +384,15 @@ impl TreasuryContract {
     /// * `executor` - The signer executing the transaction.
     /// * `tx_id` - The ID of the transaction to execute.
     ///
+    /// # Returns
+    /// Ok(()) on successful execution.
+    ///
     /// # Errors
     /// * `Error::NotASigner` - If executor is not a signer.
     /// * `Error::TransactionNotFound` - If the transaction doesn't exist.
     /// * `Error::AlreadyExecuted` - If already executed.
     /// * `Error::Unauthorized` - If approval threshold not met.
+    /// * `Error::InsufficientFunds` - If treasury has insufficient balance.
     pub fn execute(env: Env, executor: Address, tx_id: u64) -> Result<(), Error> {
         Self::require_initialized(&env)?;
         Self::require_signer(&env, &executor)?;
