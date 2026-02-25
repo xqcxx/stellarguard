@@ -714,20 +714,21 @@ impl TreasuryContract {
 mod test {
     use super::*;
     use soroban_sdk::testutils::Address as _;
-    use soroban_sdk::Env;
+    use soroban_sdk::testutils::Events as _;
+    use soroban_sdk::{vec, Env, IntoVal, Val};
 
-    fn setup_contract() -> (Env, Address, TreasuryContractClient<'static>) {
+    fn setup_contract() -> (Env, Address, Address, TreasuryContractClient<'static>) {
         let env = Env::default();
         env.mock_all_auths();
         let contract_id = env.register(TreasuryContract, ());
         let client = TreasuryContractClient::new(&env, &contract_id);
         let admin = Address::generate(&env);
-        (env, admin, client)
+        (env, admin, contract_id, client)
     }
 
     #[test]
     fn test_initialize() {
-        let (env, admin, client) = setup_contract();
+        let (env, admin, _contract_id, client) = setup_contract();
 
         let signer1 = Address::generate(&env);
         let signer2 = Address::generate(&env);
@@ -746,7 +747,7 @@ mod test {
 
     #[test]
     fn test_deposit() {
-        let (env, admin, client) = setup_contract();
+        let (env, admin, _contract_id, client) = setup_contract();
 
         let signer1 = Address::generate(&env);
         let signers = Vec::from_array(&env, [signer1.clone()]);
@@ -760,7 +761,7 @@ mod test {
 
     #[test]
     fn test_propose_and_approve() {
-        let (env, admin, client) = setup_contract();
+        let (env, admin, _contract_id, client) = setup_contract();
 
         let signer1 = Address::generate(&env);
         let signer2 = Address::generate(&env);
@@ -789,5 +790,141 @@ mod test {
         // Check transaction marked as executed
         let tx = client.get_transaction(&tx_id);
         assert_eq!(tx.executed, true);
+    }
+
+    #[test]
+    fn test_init_emits_event() {
+        let (env, admin, contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        let signer3 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1, signer2, signer3]);
+
+        client.initialize(&admin, &2, &signers);
+
+        let events = env.events().all();
+        let event = events.get(events.len() - 1).unwrap();
+        assert_eq!(event.0, contract_id);
+        let expected_topics: Vec<Val> = vec![
+            &env,
+            symbol_short!("treasury").into_val(&env),
+            symbol_short!("init").into_val(&env),
+        ];
+        assert_eq!(event.1, expected_topics);
+        let expected_data: Val = (admin, 2u32, 3u32).into_val(&env);
+        assert_eq!(event.2, expected_data);
+    }
+
+    #[test]
+    fn test_deposit_emits_event() {
+        let (env, admin, contract_id, client) = setup_contract();
+
+        let signer = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer.clone()]);
+        client.initialize(&admin, &1, &signers);
+
+        let depositor = Address::generate(&env);
+        client.deposit(&depositor, &1_000_000);
+
+        let events = env.events().all();
+        let event = events.get(events.len() - 1).unwrap();
+        assert_eq!(event.0, contract_id);
+        let expected_topics: Vec<Val> = vec![
+            &env,
+            symbol_short!("treasury").into_val(&env),
+            symbol_short!("deposit").into_val(&env),
+        ];
+        assert_eq!(event.1, expected_topics);
+        let expected_data: Val = (depositor, 1_000_000_i128, 1_000_000_i128).into_val(&env);
+        assert_eq!(event.2, expected_data);
+    }
+
+    #[test]
+    fn test_propose_emits_event() {
+        let (env, admin, contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone(), signer2]);
+        client.initialize(&admin, &2, &signers);
+
+        client.deposit(&signer1, &5_000_000);
+
+        let recipient = Address::generate(&env);
+        let tx_id =
+            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &symbol_short!("rent"));
+
+        let events = env.events().all();
+        let event = events.get(events.len() - 1).unwrap();
+        assert_eq!(event.0, contract_id);
+        let expected_topics: Vec<Val> = vec![
+            &env,
+            symbol_short!("treasury").into_val(&env),
+            symbol_short!("propose").into_val(&env),
+        ];
+        assert_eq!(event.1, expected_topics);
+        let expected_data: Val =
+            (tx_id, signer1, recipient, 1_000_000_i128).into_val(&env);
+        assert_eq!(event.2, expected_data);
+    }
+
+    #[test]
+    fn test_approve_emits_event() {
+        let (env, admin, contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone(), signer2.clone()]);
+        client.initialize(&admin, &2, &signers);
+
+        client.deposit(&signer1, &5_000_000);
+        let recipient = Address::generate(&env);
+        let tx_id =
+            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &symbol_short!("rent"));
+
+        let approval_count = client.approve(&signer2, &tx_id);
+
+        let events = env.events().all();
+        let event = events.get(events.len() - 1).unwrap();
+        assert_eq!(event.0, contract_id);
+        let expected_topics: Vec<Val> = vec![
+            &env,
+            symbol_short!("treasury").into_val(&env),
+            symbol_short!("approve").into_val(&env),
+        ];
+        assert_eq!(event.1, expected_topics);
+        let expected_data: Val = (tx_id, signer2, approval_count).into_val(&env);
+        assert_eq!(event.2, expected_data);
+    }
+
+    #[test]
+    fn test_execute_emits_event() {
+        let (env, admin, contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone(), signer2.clone()]);
+        client.initialize(&admin, &2, &signers);
+
+        client.deposit(&signer1, &5_000_000);
+        let recipient = Address::generate(&env);
+        let tx_id =
+            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &symbol_short!("rent"));
+        client.approve(&signer2, &tx_id);
+        client.execute(&signer1, &tx_id);
+
+        let events = env.events().all();
+        let event = events.get(events.len() - 1).unwrap();
+        assert_eq!(event.0, contract_id);
+        let expected_topics: Vec<Val> = vec![
+            &env,
+            symbol_short!("treasury").into_val(&env),
+            symbol_short!("execute").into_val(&env),
+        ];
+        assert_eq!(event.1, expected_topics);
+        let expected_data: Val =
+            (tx_id, recipient, 1_000_000_i128, 4_000_000_i128).into_val(&env);
+        assert_eq!(event.2, expected_data);
     }
 }

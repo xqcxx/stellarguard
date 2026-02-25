@@ -234,6 +234,15 @@ Repeat for each contract (governance, token-vault, access-control).
 | `(treasury, approve)` | `(tx_id, signer, approval_count)` | Approval added |
 | `(treasury, execute)` | `(tx_id, to, amount, new_balance)` | Withdrawal executed |
 
+**Treasury Event Schemas**
+| Event | Fields |
+|-------|--------|
+| `(treasury, init)` | `admin: Address`, `threshold: u32`, `signer_count: u32` |
+| `(treasury, deposit)` | `from: Address`, `amount: i128`, `new_balance: i128` |
+| `(treasury, propose)` | `tx_id: u64`, `proposer: Address`, `to: Address`, `amount: i128` |
+| `(treasury, approve)` | `tx_id: u64`, `signer: Address`, `approval_count: u32` |
+| `(treasury, execute)` | `tx_id: u64`, `to: Address`, `amount: i128`, `new_balance: i128` |
+
 ### Governance Events
 | Topic | Data | Description |
 |-------|------|-------------|
