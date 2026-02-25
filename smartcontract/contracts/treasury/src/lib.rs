@@ -319,6 +319,9 @@ impl TreasuryContract {
     /// * `signer` - The signer approving the transaction.
     /// * `tx_id` - The ID of the transaction to approve.
     ///
+    /// # Returns
+    /// The current approval count.
+    ///
     /// # Errors
     /// * `Error::NotASigner` - If the caller is not a signer.
     /// * `Error::TransactionNotFound` - If the transaction doesn't exist.
@@ -865,8 +868,7 @@ mod test {
             symbol_short!("propose").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let expected_data: Val =
-            (tx_id, signer1, recipient, 1_000_000_i128).into_val(&env);
+        let expected_data: Val = (tx_id, signer1, recipient, 1_000_000_i128).into_val(&env);
         assert_eq!(event.2, expected_data);
     }
 
@@ -924,8 +926,7 @@ mod test {
             symbol_short!("execute").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let expected_data: Val =
-            (tx_id, recipient, 1_000_000_i128, 4_000_000_i128).into_val(&env);
+        let expected_data: Val = (tx_id, recipient, 1_000_000_i128, 4_000_000_i128).into_val(&env);
         assert_eq!(event.2, expected_data);
     }
 }
