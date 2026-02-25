@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(dead_code)]
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, log, symbol_short, Address, Env, Symbol,
@@ -318,6 +319,9 @@ impl TreasuryContract {
     /// * `signer` - The signer approving the transaction.
     /// * `tx_id` - The ID of the transaction to approve.
     ///
+    /// # Returns
+    /// The current approval count.
+    ///
     /// # Errors
     /// * `Error::NotASigner` - If the caller is not a signer.
     /// * `Error::TransactionNotFound` - If the transaction doesn't exist.
@@ -380,11 +384,15 @@ impl TreasuryContract {
     /// * `executor` - The signer executing the transaction.
     /// * `tx_id` - The ID of the transaction to execute.
     ///
+    /// # Returns
+    /// Ok(()) on successful execution.
+    ///
     /// # Errors
     /// * `Error::NotASigner` - If executor is not a signer.
     /// * `Error::TransactionNotFound` - If the transaction doesn't exist.
     /// * `Error::AlreadyExecuted` - If already executed.
     /// * `Error::Unauthorized` - If approval threshold not met.
+    /// * `Error::InsufficientFunds` - If treasury has insufficient balance.
     pub fn execute(env: Env, executor: Address, tx_id: u64) -> Result<(), Error> {
         Self::require_initialized(&env)?;
         Self::require_signer(&env, &executor)?;
@@ -905,8 +913,8 @@ mod test {
             symbol_short!("propose").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let data: (u64, Address, Address, i128) = event.2.try_into_val(&env).unwrap();
-        assert_eq!(data, (tx_id, signer1, recipient, 1_000_000_i128));
+        let expected_data: Val = (tx_id, signer1, recipient, 1_000_000_i128).into_val(&env);
+        assert_eq!(event.2, expected_data);
     }
 
     #[test]
@@ -963,7 +971,7 @@ mod test {
             symbol_short!("execute").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let data: (u64, Address, i128, i128) = event.2.try_into_val(&env).unwrap();
-        assert_eq!(data, (tx_id, recipient, 1_000_000_i128, 4_000_000_i128));
+        let expected_data: Val = (tx_id, recipient, 1_000_000_i128, 4_000_000_i128).into_val(&env);
+        assert_eq!(event.2, expected_data);
     }
 }
