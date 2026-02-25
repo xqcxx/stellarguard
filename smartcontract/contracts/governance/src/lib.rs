@@ -1,9 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, contracterror, symbol_short,
-    Address, Env, Map, Symbol, Vec,
-    log,
+    contract, contracterror, contractimpl, contracttype, log, symbol_short, Address, Env, Symbol,
+    Vec,
 };
 
 // ============================================================================
@@ -193,7 +192,12 @@ impl GovernanceContract {
             (admin.clone(), members.len(), quorum_percent),
         );
 
-        log!(&env, "Governance initialized: {} members, {}% quorum", members.len(), quorum_percent);
+        log!(
+            &env,
+            "Governance initialized: {} members, {}% quorum",
+            members.len(),
+            quorum_percent
+        );
         Ok(())
     }
 
@@ -283,12 +287,7 @@ impl GovernanceContract {
     /// * `voter` - Must be a DAO member.
     /// * `proposal_id` - The ID of the proposal to vote on.
     /// * `vote_for` - `true` to vote in favor, `false` to vote against.
-    pub fn vote(
-        env: Env,
-        voter: Address,
-        proposal_id: u64,
-        vote_for: bool,
-    ) -> Result<(), Error> {
+    pub fn vote(env: Env, voter: Address, proposal_id: u64, vote_for: bool) -> Result<(), Error> {
         Self::require_initialized(&env)?;
         Self::require_member(&env, &voter)?;
 
@@ -415,11 +414,7 @@ impl GovernanceContract {
 
     /// Execute a passed proposal.
     /// Only the admin or proposer can execute.
-    pub fn execute_proposal(
-        env: Env,
-        executor: Address,
-        proposal_id: u64,
-    ) -> Result<(), Error> {
+    pub fn execute_proposal(env: Env, executor: Address, proposal_id: u64) -> Result<(), Error> {
         Self::require_initialized(&env)?;
 
         executor.require_auth();
@@ -603,9 +598,7 @@ impl GovernanceContract {
 
         current_admin.require_auth();
 
-        env.storage()
-            .instance()
-            .set(&DataKey::Admin, &new_admin);
+        env.storage().instance().set(&DataKey::Admin, &new_admin);
 
         env.events().publish(
             (symbol_short!("gov"), symbol_short!("admin")),
@@ -634,10 +627,8 @@ impl GovernanceContract {
             .instance()
             .set(&DataKey::QuorumPercent, &new_quorum);
 
-        env.events().publish(
-            (symbol_short!("gov"), symbol_short!("quorum")),
-            new_quorum,
-        );
+        env.events()
+            .publish((symbol_short!("gov"), symbol_short!("quorum")), new_quorum);
 
         Ok(())
     }
@@ -735,10 +726,7 @@ mod test {
         let member1 = Address::generate(&env);
         let member2 = Address::generate(&env);
         let member3 = Address::generate(&env);
-        let members = Vec::from_array(
-            &env,
-            [member1.clone(), member2.clone(), member3.clone()],
-        );
+        let members = Vec::from_array(&env, [member1.clone(), member2.clone(), member3.clone()]);
 
         client.initialize(&admin, &members, &50, &1000);
 

@@ -1,9 +1,7 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, contracterror, symbol_short,
-    Address, Env, Symbol, Vec,
-    log,
+    contract, contracterror, contractimpl, contracttype, log, symbol_short, Address, Env, Vec,
 };
 
 // ============================================================================
@@ -40,7 +38,7 @@ pub enum Error {
 /// Role levels in the access control hierarchy.
 /// Higher values = more permissions.
 #[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum Role {
     /// Can only view data, no write operations.
@@ -136,9 +134,7 @@ impl AccessControlContract {
         // Initialize member list with owner
         let mut members = Vec::new(&env);
         members.push_back(owner.clone());
-        env.storage()
-            .instance()
-            .set(&DataKey::AllMembers, &members);
+        env.storage().instance().set(&DataKey::AllMembers, &members);
 
         // Initialize role counts
         env.storage()
@@ -154,10 +150,8 @@ impl AccessControlContract {
             .instance()
             .set(&DataKey::RoleCount(Role::Viewer as u32), &0_u32);
 
-        env.events().publish(
-            (symbol_short!("acl"), symbol_short!("init")),
-            owner.clone(),
-        );
+        env.events()
+            .publish((symbol_short!("acl"), symbol_short!("init")), owner.clone());
 
         log!(&env, "Access control initialized with owner {:?}", owner);
         Ok(())
@@ -243,9 +237,7 @@ impl AccessControlContract {
                 .get(&DataKey::AllMembers)
                 .unwrap_or(Vec::new(&env));
             members.push_back(target.clone());
-            env.storage()
-                .instance()
-                .set(&DataKey::AllMembers, &members);
+            env.storage().instance().set(&DataKey::AllMembers, &members);
         }
 
         // Create assignment
@@ -276,11 +268,7 @@ impl AccessControlContract {
 
     /// Revoke a role from an address.
     /// Owners cannot be removed. Only owners can revoke admin roles.
-    pub fn revoke_role(
-        env: Env,
-        revoker: Address,
-        target: Address,
-    ) -> Result<(), Error> {
+    pub fn revoke_role(env: Env, revoker: Address, target: Address) -> Result<(), Error> {
         Self::require_initialized(&env)?;
 
         revoker.require_auth();
@@ -485,9 +473,7 @@ impl AccessControlContract {
         }
 
         // Update owner
-        env.storage()
-            .instance()
-            .set(&DataKey::Owner, &new_owner);
+        env.storage().instance().set(&DataKey::Owner, &new_owner);
 
         // Update role assignments
         let new_owner_assignment = RoleAssignment {
@@ -526,9 +512,7 @@ impl AccessControlContract {
         }
         if !found {
             members.push_back(new_owner.clone());
-            env.storage()
-                .instance()
-                .set(&DataKey::AllMembers, &members);
+            env.storage().instance().set(&DataKey::AllMembers, &members);
         }
 
         // Update role counts

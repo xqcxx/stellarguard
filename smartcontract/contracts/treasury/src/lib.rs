@@ -1,9 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, contracterror, symbol_short,
-    Address, Env, Map, Symbol, Vec,
-    log,
+    contract, contracterror, contractimpl, contracttype, log, symbol_short, Address, Env, Symbol,
+    Vec,
 };
 
 // ============================================================================
@@ -149,7 +148,9 @@ impl TreasuryContract {
         // Store all initial state
         env.storage().instance().set(&DataKey::Initialized, &true);
         env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::Threshold, &threshold);
+        env.storage()
+            .instance()
+            .set(&DataKey::Threshold, &threshold);
         env.storage().instance().set(&DataKey::Signers, &signers);
         env.storage().instance().set(&DataKey::Balance, &0_i128);
         env.storage().instance().set(&DataKey::TxCounter, &0_u64);
@@ -160,7 +161,12 @@ impl TreasuryContract {
             (admin.clone(), threshold, signer_count),
         );
 
-        log!(&env, "Treasury initialized with {} signers, threshold {}", signer_count, threshold);
+        log!(
+            &env,
+            "Treasury initialized with {} signers, threshold {}",
+            signer_count,
+            threshold
+        );
         Ok(())
     }
 
@@ -188,11 +194,7 @@ impl TreasuryContract {
         from.require_auth();
 
         // Update balance
-        let current_balance: i128 = env
-            .storage()
-            .instance()
-            .get(&DataKey::Balance)
-            .unwrap_or(0);
+        let current_balance: i128 = env.storage().instance().get(&DataKey::Balance).unwrap_or(0);
         let new_balance = current_balance + amount;
         env.storage()
             .instance()
@@ -204,7 +206,13 @@ impl TreasuryContract {
             (from.clone(), amount, new_balance),
         );
 
-        log!(&env, "Deposit of {} from {:?}, new balance: {}", amount, from, new_balance);
+        log!(
+            &env,
+            "Deposit of {} from {:?}, new balance: {}",
+            amount,
+            from,
+            new_balance
+        );
         Ok(())
     }
 
@@ -247,11 +255,7 @@ impl TreasuryContract {
         }
 
         // Check sufficient balance
-        let balance: i128 = env
-            .storage()
-            .instance()
-            .get(&DataKey::Balance)
-            .unwrap_or(0);
+        let balance: i128 = env.storage().instance().get(&DataKey::Balance).unwrap_or(0);
         if balance < amount {
             return Err(Error::InsufficientFunds);
         }
@@ -263,9 +267,7 @@ impl TreasuryContract {
             .get(&DataKey::TxCounter)
             .unwrap_or(0);
         let next_id = tx_id + 1;
-        env.storage()
-            .instance()
-            .set(&DataKey::TxCounter, &next_id);
+        env.storage().instance().set(&DataKey::TxCounter, &next_id);
 
         // Create initial approval list with proposer
         let mut approvals = Vec::new(&env);
@@ -294,7 +296,13 @@ impl TreasuryContract {
             (next_id, proposer.clone(), to, amount),
         );
 
-        log!(&env, "Withdrawal proposal #{} created by {:?} for {}", next_id, proposer, amount);
+        log!(
+            &env,
+            "Withdrawal proposal #{} created by {:?} for {}",
+            next_id,
+            proposer,
+            amount
+        );
         Ok(next_id)
     }
 
@@ -354,7 +362,13 @@ impl TreasuryContract {
             (tx_id, signer.clone(), approval_count),
         );
 
-        log!(&env, "Transaction #{} approved by {:?} ({} approvals)", tx_id, signer, approval_count);
+        log!(
+            &env,
+            "Transaction #{} approved by {:?} ({} approvals)",
+            tx_id,
+            signer,
+            approval_count
+        );
         Ok(approval_count)
     }
 
@@ -398,11 +412,7 @@ impl TreasuryContract {
         }
 
         // Deduct balance
-        let current_balance: i128 = env
-            .storage()
-            .instance()
-            .get(&DataKey::Balance)
-            .unwrap_or(0);
+        let current_balance: i128 = env.storage().instance().get(&DataKey::Balance).unwrap_or(0);
         if current_balance < transaction.amount {
             return Err(Error::InsufficientFunds);
         }
@@ -420,10 +430,21 @@ impl TreasuryContract {
         // Emit execution event
         env.events().publish(
             (symbol_short!("treasury"), symbol_short!("execute")),
-            (tx_id, transaction.to.clone(), transaction.amount, new_balance),
+            (
+                tx_id,
+                transaction.to.clone(),
+                transaction.amount,
+                new_balance,
+            ),
         );
 
-        log!(&env, "Transaction #{} executed: {} to {:?}", tx_id, transaction.amount, transaction.to);
+        log!(
+            &env,
+            "Transaction #{} executed: {} to {:?}",
+            tx_id,
+            transaction.amount,
+            transaction.to
+        );
         Ok(())
     }
 
@@ -552,10 +573,7 @@ impl TreasuryContract {
 
     /// Get the current treasury balance.
     pub fn get_balance(env: Env) -> i128 {
-        env.storage()
-            .instance()
-            .get(&DataKey::Balance)
-            .unwrap_or(0)
+        env.storage().instance().get(&DataKey::Balance).unwrap_or(0)
     }
 
     /// Get the treasury configuration.
@@ -577,11 +595,7 @@ impl TreasuryContract {
             .instance()
             .get(&DataKey::Signers)
             .unwrap_or(Vec::new(&env));
-        let balance: i128 = env
-            .storage()
-            .instance()
-            .get(&DataKey::Balance)
-            .unwrap_or(0);
+        let balance: i128 = env.storage().instance().get(&DataKey::Balance).unwrap_or(0);
         let tx_count: u64 = env
             .storage()
             .instance()
@@ -618,15 +632,17 @@ impl TreasuryContract {
     // ========================================================================
 
     /// Transfer admin role to a new address.
-    pub fn transfer_admin(env: Env, current_admin: Address, new_admin: Address) -> Result<(), Error> {
+    pub fn transfer_admin(
+        env: Env,
+        current_admin: Address,
+        new_admin: Address,
+    ) -> Result<(), Error> {
         Self::require_initialized(&env)?;
         Self::require_admin(&env, &current_admin)?;
 
         current_admin.require_auth();
 
-        env.storage()
-            .instance()
-            .set(&DataKey::Admin, &new_admin);
+        env.storage().instance().set(&DataKey::Admin, &new_admin);
 
         env.events().publish(
             (symbol_short!("treasury"), symbol_short!("admin")),
@@ -637,7 +653,11 @@ impl TreasuryContract {
     }
 
     /// Upgrade the contract WASM. Admin only.
-    pub fn upgrade(env: Env, admin: Address, new_wasm_hash: soroban_sdk::BytesN<32>) -> Result<(), Error> {
+    pub fn upgrade(
+        env: Env,
+        admin: Address,
+        new_wasm_hash: soroban_sdk::BytesN<32>,
+    ) -> Result<(), Error> {
         Self::require_initialized(&env)?;
         Self::require_admin(&env, &admin)?;
 
@@ -713,10 +733,7 @@ mod test {
         let signer2 = Address::generate(&env);
         let signer3 = Address::generate(&env);
 
-        let signers = Vec::from_array(
-            &env,
-            [signer1.clone(), signer2.clone(), signer3.clone()],
-        );
+        let signers = Vec::from_array(&env, [signer1.clone(), signer2.clone(), signer3.clone()]);
 
         client.initialize(&admin, &2, &signers);
 
@@ -755,12 +772,8 @@ mod test {
 
         // Propose withdrawal
         let recipient = Address::generate(&env);
-        let tx_id = client.propose_withdrawal(
-            &signer1,
-            &recipient,
-            &1_000_000,
-            &symbol_short!("rent"),
-        );
+        let tx_id =
+            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &symbol_short!("rent"));
         assert_eq!(tx_id, 1);
 
         // Second signer approves
