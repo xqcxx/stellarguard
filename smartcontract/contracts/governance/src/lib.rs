@@ -38,6 +38,10 @@ pub enum Error {
     NotAMember = 11,
     /// Voting period is still active.
     VotingStillActive = 12,
+    /// Arithmetic overflow occurred.
+    Overflow = 13,
+    /// Storage operation failed.
+    StorageError = 14,
 }
 
 // ============================================================================
@@ -213,11 +217,11 @@ impl GovernanceContract {
     ///
     /// # Arguments
     /// * `proposer` - Must be a DAO member.
-    /// * `title` - Short title for the proposal.
-    /// * `description` - Description of what the proposal does.
+    /// * `title` - Short title for the proposal (must not be empty).
+    /// * `description` - Description of what the proposal does (must not be empty).
     /// * `action` - The type of proposal action.
-    /// * `amount` - Amount requested (relevant for Funding proposals, 0 otherwise).
-    /// * `target` - Target address (relevant for AddMember/RemoveMember, use proposer otherwise).
+    /// * `amount` - Amount requested (must be >= 0, relevant for Funding proposals).
+    /// * `target` - Target address (must be valid for AddMember/RemoveMember actions).
     pub fn create_proposal(
         env: Env,
         proposer: Address,
@@ -232,13 +236,37 @@ impl GovernanceContract {
 
         proposer.require_auth();
 
-        // Get and increment counter
-        let proposal_id: u64 = env
+        // Validation checks
+        if title.is_empty() {
+            return Err(Error::InvalidProposal);
+        }
+        if description.is_empty() {
+            return Err(Error::InvalidProposal);
+        }
+        if amount < 0 {
+            return Err(Error::InvalidProposal);
+        }
+        
+        // Validate target based on action type
+        match action {
+            ProposalAction::AddMember | ProposalAction::RemoveMember => {
+                // For member actions, target must not be the zero address
+                if target == Address::zero() {
+                    return Err(Error::InvalidProposal);
+                }
+            }
+            _ => {
+                // For other actions, target can be any valid address
+            }
+        }
+
+        // Get and increment counter with overflow protection
+        let current_counter: u64 = env
             .storage()
             .instance()
             .get(&DataKey::ProposalCounter)
-            .unwrap_or(0)
-            + 1;
+            .unwrap_or(0);
+        let proposal_id = current_counter.checked_add(1).ok_or(Error::Overflow)?;
         env.storage()
             .instance()
             .set(&DataKey::ProposalCounter, &proposal_id);
@@ -250,7 +278,7 @@ impl GovernanceContract {
             .get(&DataKey::VotingPeriod)
             .unwrap_or(1000);
         let current_ledger = env.ledger().sequence();
-        let ends_at = current_ledger + voting_period;
+        let ends_at = current_ledger.checked_add(voting_period).ok_or(Error::Overflow)?;
 
         let proposal = Proposal {
             id: proposal_id,
@@ -268,13 +296,15 @@ impl GovernanceContract {
             target: target.clone(),
         };
 
+        // Store proposal with error handling
         env.storage()
             .persistent()
             .set(&DataKey::Proposal(proposal_id), &proposal);
 
+        // Emit event with required payload
         env.events().publish(
             (symbol_short!("gov"), symbol_short!("propose")),
-            (proposal_id, proposer.clone(), title, action),
+            (proposal_id, proposer.clone(), ends_at, target.clone(), amount),
         );
 
         log!(&env, "Proposal #{} created by {:?}", proposal_id, proposer);
@@ -752,6 +782,298 @@ mod test {
         let proposal = client.get_proposal(&proposal_id);
         assert_eq!(proposal.votes_for, 2);
         assert_eq!(proposal.total_votes, 2);
+        assert_eq!(proposal.status, ProposalStatus::Active);
+    }
+
+    #[test]
+    fn test_create_proposal_success() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone()]);
+
+        client.initialize(&admin, &members, &50, &1000);
+
+        // Create a funding proposal
+        let proposal_id = client.create_proposal(
+            &member1,
+            &symbol_short!("fund_dev"),
+            &symbol_short!("dev_work"),
+            &ProposalAction::Funding,
+            &500_000,
+            &member1,
+        );
+        assert_eq!(proposal_id, 1);
+
+        let proposal = client.get_proposal(&proposal_id);
+        assert_eq!(proposal.id, 1);
+        assert_eq!(proposal.proposer, member1);
+        assert_eq!(proposal.title, symbol_short!("fund_dev"));
+        assert_eq!(proposal.description, symbol_short!("dev_work"));
+        assert_eq!(proposal.action, ProposalAction::Funding);
+        assert_eq!(proposal.amount, 500_000);
+        assert_eq!(proposal.target, member1);
+        assert_eq!(proposal.votes_for, 0);
+        assert_eq!(proposal.votes_against, 0);
+        assert_eq!(proposal.total_votes, 0);
+        assert_eq!(proposal.status, ProposalStatus::Active);
+        
+        // Verify ends_at is calculated correctly (current_ledger + voting_period)
+        let current_ledger = env.ledger().sequence();
+        assert_eq!(proposal.ends_at, current_ledger + 1000);
+    }
+
+    #[test]
+    fn test_create_proposal_non_member_fails() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let non_member = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1]);
+
+        client.initialize(&admin, &members, &50, &1000);
+
+        let result = client.try_create_proposal(
+            &non_member,
+            &symbol_short!("test"),
+            &symbol_short!("test"),
+            &ProposalAction::General,
+            &0,
+            &non_member,
+        );
+        assert_eq!(result, Err(Error::NotAMember));
+    }
+
+    #[test]
+    fn test_create_proposal_empty_title_fails() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone()]);
+
+        client.initialize(&admin, &members, &50, &1000);
+
+        let result = client.try_create_proposal(
+            &member1,
+            &symbol_short!(""), // Empty title
+            &symbol_short!("test"),
+            &ProposalAction::General,
+            &0,
+            &member1,
+        );
+        assert_eq!(result, Err(Error::InvalidProposal));
+    }
+
+    #[test]
+    fn test_create_proposal_empty_description_fails() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone()]);
+
+        client.initialize(&admin, &members, &50, &1000);
+
+        let result = client.try_create_proposal(
+            &member1,
+            &symbol_short!("test"),
+            &symbol_short!(""), // Empty description
+            &ProposalAction::General,
+            &0,
+            &member1,
+        );
+        assert_eq!(result, Err(Error::InvalidProposal));
+    }
+
+    #[test]
+    fn test_create_proposal_negative_amount_fails() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone()]);
+
+        client.initialize(&admin, &members, &50, &1000);
+
+        let result = client.try_create_proposal(
+            &member1,
+            &symbol_short!("test"),
+            &symbol_short!("test"),
+            &ProposalAction::Funding,
+            &-100, // Negative amount
+            &member1,
+        );
+        assert_eq!(result, Err(Error::InvalidProposal));
+    }
+
+    #[test]
+    fn test_create_proposal_invalid_target_for_add_member() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone()]);
+
+        client.initialize(&admin, &members, &50, &1000);
+
+        let result = client.try_create_proposal(
+            &member1,
+            &symbol_short!("test"),
+            &symbol_short!("test"),
+            &ProposalAction::AddMember,
+            &0,
+            &Address::zero(), // Invalid target for AddMember
+        );
+        assert_eq!(result, Err(Error::InvalidProposal));
+    }
+
+    #[test]
+    fn test_create_proposal_invalid_target_for_remove_member() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone()]);
+
+        client.initialize(&admin, &members, &50, &1000);
+
+        let result = client.try_create_proposal(
+            &member1,
+            &symbol_short!("test"),
+            &symbol_short!("test"),
+            &ProposalAction::RemoveMember,
+            &0,
+            &Address::zero(), // Invalid target for RemoveMember
+        );
+        assert_eq!(result, Err(Error::InvalidProposal));
+    }
+
+    #[test]
+    fn test_create_proposal_valid_target_for_other_actions() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone()]);
+
+        client.initialize(&admin, &members, &50, &1000);
+
+        // Should work with zero target for non-member actions
+        let proposal_id = client.create_proposal(
+            &member1,
+            &symbol_short!("test"),
+            &symbol_short!("test"),
+            &ProposalAction::General,
+            &0,
+            &Address::zero(),
+        );
+        assert_eq!(proposal_id, 1);
+
+        let proposal = client.get_proposal(&proposal_id);
+        assert_eq!(proposal.target, Address::zero());
+    }
+
+    #[test]
+    fn test_create_proposal_incremental_ids() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone()]);
+
+        client.initialize(&admin, &members, &50, &1000);
+
+        // Create multiple proposals
+        let proposal_id1 = client.create_proposal(
+            &member1,
+            &symbol_short!("test1"),
+            &symbol_short!("test1"),
+            &ProposalAction::General,
+            &0,
+            &member1,
+        );
+        let proposal_id2 = client.create_proposal(
+            &member1,
+            &symbol_short!("test2"),
+            &symbol_short!("test2"),
+            &ProposalAction::General,
+            &0,
+            &member1,
+        );
+        let proposal_id3 = client.create_proposal(
+            &member1,
+            &symbol_short!("test3"),
+            &symbol_short!("test3"),
+            &ProposalAction::General,
+            &0,
+            &member1,
+        );
+
+        assert_eq!(proposal_id1, 1);
+        assert_eq!(proposal_id2, 2);
+        assert_eq!(proposal_id3, 3);
+
+        // Verify proposal counter is updated
+        let config = client.get_config();
+        assert_eq!(config.proposal_count, 3);
+    }
+
+    #[test]
+    fn test_create_proposal_event_emission() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone()]);
+
+        client.initialize(&admin, &members, &50, &1000);
+
+        // Create proposal and check event
+        let proposal_id = client.create_proposal(
+            &member1,
+            &symbol_short!("fund_dev"),
+            &symbol_short!("dev_work"),
+            &ProposalAction::Funding,
+            &500_000,
+            &member1,
+        );
+
+        // Verify the event was published with correct payload
+        let events = env.events().all();
+        assert_eq!(events.len(), 2); // init + propose events
+        
+        // The propose event should be the second one
+        let propose_event = &events[1];
+        assert_eq!(propose_event.topic.0, symbol_short!("gov"));
+        assert_eq!(propose_event.topic.1, symbol_short!("propose"));
+        
+        let event_data: (u64, Address, u32, Address, i128) = propose_event.data.clone().try_into().unwrap();
+        assert_eq!(event_data.0, proposal_id); // proposal_id
+        assert_eq!(event_data.1, member1); // proposer
+        assert_eq!(event_data.3, member1); // target
+        assert_eq!(event_data.4, 500_000); // amount
+        
+        // Verify ends_at is in the event payload
+        let current_ledger = env.ledger().sequence();
+        assert_eq!(event_data.2, current_ledger + 1000); // ends_at
+    }
+
+    #[test]
+    fn test_create_proposal_persistence() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone()]);
+
+        client.initialize(&admin, &members, &50, &1000);
+
+        // Create proposal
+        let proposal_id = client.create_proposal(
+            &member1,
+            &symbol_short!("test"),
+            &symbol_short!("test"),
+            &ProposalAction::General,
+            &0,
+            &member1,
+        );
+
+        // Verify proposal is persisted
+        let proposal = client.get_proposal(&proposal_id);
+        assert_eq!(proposal.id, proposal_id);
+        assert_eq!(proposal.proposer, member1);
         assert_eq!(proposal.status, ProposalStatus::Active);
     }
 
