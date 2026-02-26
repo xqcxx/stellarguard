@@ -1,11 +1,8 @@
 /**
  * Network configuration for StellarGuard.
- *
- * TODO: [FE-4] Complete network configuration:
- * - Add Futurenet/Testnet/Mainnet configuration
- * - Implement provider helpers
- * - Add network switching support
  */
+
+import { SorobanRpc } from "@stellar/stellar-sdk";
 
 // ============================================================================
 // Network Constants
@@ -57,14 +54,9 @@ export const NETWORK_PASSPHRASE = ACTIVE_NETWORK.networkPassphrase;
 
 /**
  * Get a Soroban RPC server instance.
- *
- * TODO: Implement with @stellar/stellar-sdk
- * import { SorobanRpc } from "@stellar/stellar-sdk";
- * return new SorobanRpc.Server(SOROBAN_RPC_URL);
  */
-export function getServer() {
-  // TODO: Return SorobanRpc.Server instance
-  throw new Error("Server not initialized — see issue FE-4");
+export function getServer(): SorobanRpc.Server {
+  return new SorobanRpc.Server(SOROBAN_RPC_URL);
 }
 
 /**
