@@ -694,13 +694,13 @@ impl GovernanceContract {
 #[cfg(test)]
 mod test {
     use super::*;
-    use soroban_sdk::testutils::{Address as _, Ledger};
+    use soroban_sdk::testutils::Address as _;
     use soroban_sdk::Env;
 
     fn setup_contract() -> (Env, Address, GovernanceContractClient<'static>) {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register(GovernanceContract, ());
+        let contract_id = env.register_contract(None, GovernanceContract);
         let client = GovernanceContractClient::new(&env, &contract_id);
         let admin = Address::generate(&env);
         (env, admin, client)
