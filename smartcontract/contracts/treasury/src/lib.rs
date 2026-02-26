@@ -2,8 +2,8 @@
 #![allow(dead_code)]
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, log, symbol_short, Address, Env, Symbol,
-    Vec,
+    contract, contracterror, contractimpl, contracttype, log, symbol_short, token, Address, Env,
+    Symbol, Vec,
 };
 
 // ============================================================================
@@ -63,6 +63,8 @@ pub enum DataKey {
     TxCounter,
     /// Whether the contract is initialized.
     Initialized,
+    /// Per-depositor, per-token balance: (depositor, token_address) → i128.
+    TokenBalance(Address, Address),
 }
 
 /// A pending transaction proposal in the multi-sig treasury.
@@ -211,6 +213,70 @@ impl TreasuryContract {
             &env,
             "Deposit of {} from {:?}, new balance: {}",
             amount,
+            from,
+            new_balance
+        );
+        Ok(())
+    }
+
+    /// Deposit Soroban tokens (SAC or custom SEP-41 tokens) into the treasury.
+    ///
+    /// Calls `transfer` on the token contract to move `amount` tokens from
+    /// `from` into this contract, then records the balance indexed by the
+    /// `(depositor, token_address)` pair in persistent storage so that
+    /// different tokens — and different depositors — are always tracked
+    /// independently.
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment.
+    /// * `from` - The address depositing tokens (must authorise this call).
+    /// * `token_address` - The address of the SEP-41 token contract (SAC or
+    ///   custom).
+    /// * `amount` - The amount to deposit in the token's smallest unit.
+    ///
+    /// # Errors
+    /// * `Error::NotInitialized` - If the contract is not initialized.
+    /// * `Error::InvalidAmount` - If `amount` is zero or negative.
+    pub fn deposit_token(
+        env: Env,
+        from: Address,
+        token_address: Address,
+        amount: i128,
+    ) -> Result<(), Error> {
+        Self::require_initialized(&env)?;
+
+        if amount <= 0 {
+            return Err(Error::InvalidAmount);
+        }
+
+        from.require_auth();
+
+        // Pull tokens from depositor into this contract.
+        let token_client = token::TokenClient::new(&env, &token_address);
+        token_client.transfer(&from, &env.current_contract_address(), &amount);
+
+        // Read and update the per-(depositor, token) balance.
+        let storage_key = DataKey::TokenBalance(from.clone(), token_address.clone());
+        let current_balance: i128 = env
+            .storage()
+            .persistent()
+            .get(&storage_key)
+            .unwrap_or(0);
+        let new_balance = current_balance + amount;
+        env.storage().persistent().set(&storage_key, &new_balance);
+
+        // Emit token-deposit event — topics mirror the native deposit but use
+        // "dep_tok" to keep it distinct; data includes the token address.
+        env.events().publish(
+            (symbol_short!("treasury"), symbol_short!("dep_tok")),
+            (from.clone(), token_address.clone(), amount, new_balance),
+        );
+
+        log!(
+            &env,
+            "Token deposit: {} units of {:?} from {:?}, per-token balance now {}",
+            amount,
+            token_address,
             from,
             new_balance
         );
@@ -584,6 +650,21 @@ impl TreasuryContract {
         env.storage().instance().get(&DataKey::Balance).unwrap_or(0)
     }
 
+    /// Get the token balance for a specific depositor and token contract.
+    ///
+    /// Returns `0` if no deposit has been made for this pair.
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment.
+    /// * `depositor` - The address whose balance to query.
+    /// * `token_address` - The token contract address.
+    pub fn get_token_balance(env: Env, depositor: Address, token_address: Address) -> i128 {
+        env.storage()
+            .persistent()
+            .get(&DataKey::TokenBalance(depositor, token_address))
+            .unwrap_or(0)
+    }
+
     /// Get the treasury configuration.
     pub fn get_config(env: Env) -> Result<TreasuryConfig, Error> {
         Self::require_initialized(&env)?;
@@ -723,7 +804,9 @@ mod test {
     use super::*;
     use soroban_sdk::testutils::Address as _;
     use soroban_sdk::testutils::Events as _;
-    use soroban_sdk::{vec, Env, IntoVal, TryIntoVal, Val};
+    use soroban_sdk::{vec, Env, IntoVal, TryFromVal, Val};
+
+    // ── helpers shared by all tests ──────────────────────────────────────────
 
     fn setup_contract() -> (Env, Address, Address, TreasuryContractClient<'static>) {
         let env = Env::default();
@@ -861,8 +944,14 @@ mod test {
             symbol_short!("init").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let data: (Address, u32, u32) = event.2.try_into_val(&env).unwrap();
-        assert_eq!(data, (admin, 2u32, 3u32));
+        let expected_data: Vec<Val> = vec![
+            &env,
+            admin.into_val(&env),
+            2u32.into_val(&env),
+            3u32.into_val(&env),
+        ];
+        let actual_data: Vec<Val> = Vec::try_from_val(&env, &event.2).unwrap();
+        assert_eq!(actual_data, expected_data);
     }
 
     #[test]
@@ -885,8 +974,14 @@ mod test {
             symbol_short!("deposit").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let data: (Address, i128, i128) = event.2.try_into_val(&env).unwrap();
-        assert_eq!(data, (depositor, 1_000_000_i128, 1_000_000_i128));
+        let expected_data: Vec<Val> = vec![
+            &env,
+            depositor.into_val(&env),
+            1_000_000_i128.into_val(&env),
+            1_000_000_i128.into_val(&env),
+        ];
+        let actual_data: Vec<Val> = Vec::try_from_val(&env, &event.2).unwrap();
+        assert_eq!(actual_data, expected_data);
     }
 
     #[test]
@@ -913,8 +1008,15 @@ mod test {
             symbol_short!("propose").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let expected_data: Val = (tx_id, signer1, recipient, 1_000_000_i128).into_val(&env);
-        assert_eq!(event.2, expected_data);
+        let expected_data: Vec<Val> = vec![
+            &env,
+            tx_id.into_val(&env),
+            signer1.into_val(&env),
+            recipient.into_val(&env),
+            1_000_000_i128.into_val(&env),
+        ];
+        let actual_data: Vec<Val> = Vec::try_from_val(&env, &event.2).unwrap();
+        assert_eq!(actual_data, expected_data);
     }
 
     #[test]
@@ -942,8 +1044,14 @@ mod test {
             symbol_short!("approve").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let data: (u64, Address, u32) = event.2.try_into_val(&env).unwrap();
-        assert_eq!(data, (tx_id, signer2, approval_count));
+        let expected_data: Vec<Val> = vec![
+            &env,
+            tx_id.into_val(&env),
+            signer2.into_val(&env),
+            approval_count.into_val(&env),
+        ];
+        let actual_data: Vec<Val> = Vec::try_from_val(&env, &event.2).unwrap();
+        assert_eq!(actual_data, expected_data);
     }
 
     #[test]
@@ -971,7 +1079,195 @@ mod test {
             symbol_short!("execute").into_val(&env),
         ];
         assert_eq!(event.1, expected_topics);
-        let expected_data: Val = (tx_id, recipient, 1_000_000_i128, 4_000_000_i128).into_val(&env);
-        assert_eq!(event.2, expected_data);
+        let expected_data: Vec<Val> = vec![
+            &env,
+            tx_id.into_val(&env),
+            recipient.into_val(&env),
+            1_000_000_i128.into_val(&env),
+            4_000_000_i128.into_val(&env),
+        ];
+        let actual_data: Vec<Val> = Vec::try_from_val(&env, &event.2).unwrap();
+        assert_eq!(actual_data, expected_data);
+    }
+
+    // =========================================================================
+    // Token-deposit tests
+    // =========================================================================
+
+    mod token_deposit {
+        use super::*;
+        use soroban_sdk::token::{StellarAssetClient, TokenClient};
+
+        /// Spin up a fully-initialized treasury and return
+        /// (env, admin, contract_id, client).
+        fn setup_treasury() -> (Env, Address, Address, TreasuryContractClient<'static>) {
+            let env = Env::default();
+            env.mock_all_auths();
+            let contract_id = env.register_contract(None, TreasuryContract);
+            let client = TreasuryContractClient::new(&env, &contract_id);
+            let admin = Address::generate(&env);
+            let signer = Address::generate(&env);
+            let signers = Vec::from_array(&env, [signer]);
+            client.initialize(&admin, &1, &signers);
+            (env, admin, contract_id, client)
+        }
+
+        /// Register a Stellar Asset Contract and return its address together
+        /// with both the SAC admin client (for minting) and the SEP-41 client.
+        fn setup_token(env: &Env) -> (Address, StellarAssetClient<'_>, TokenClient<'_>) {
+            let token_admin = Address::generate(env);
+            let sac_data = env.register_stellar_asset_contract_v2(token_admin.clone());
+            let token_address = sac_data.address();
+            let sac = StellarAssetClient::new(env, &token_address);
+            let tok = TokenClient::new(env, &token_address);
+            (token_address, sac, tok)
+        }
+
+        // ── test 1: single deposit updates balance ───────────────────────────
+
+        #[test]
+        fn test_deposit_token_updates_balance() {
+            let (env, _admin, _contract_id, client) = setup_treasury();
+            let (token_address, sac, _tok) = setup_token(&env);
+
+            let depositor = Address::generate(&env);
+            sac.mint(&depositor, &1_000_000);
+
+            client.deposit_token(&depositor, &token_address, &1_000_000);
+
+            assert_eq!(
+                client.get_token_balance(&depositor, &token_address),
+                1_000_000
+            );
+        }
+
+        // ── test 2: two deposits accumulate (not overwrite) ──────────────────
+
+        #[test]
+        fn test_deposit_token_accumulates() {
+            let (env, _admin, _contract_id, client) = setup_treasury();
+            let (token_address, sac, _tok) = setup_token(&env);
+
+            let depositor = Address::generate(&env);
+            sac.mint(&depositor, &3_000_000);
+
+            client.deposit_token(&depositor, &token_address, &1_000_000);
+            client.deposit_token(&depositor, &token_address, &2_000_000);
+
+            assert_eq!(
+                client.get_token_balance(&depositor, &token_address),
+                3_000_000
+            );
+        }
+
+        // ── test 3: two different tokens tracked independently ───────────────
+
+        #[test]
+        fn test_deposit_different_tokens_tracked_separately() {
+            let (env, _admin, _contract_id, client) = setup_treasury();
+            let (token_a, sac_a, _) = setup_token(&env);
+            let (token_b, sac_b, _) = setup_token(&env);
+
+            let depositor = Address::generate(&env);
+            sac_a.mint(&depositor, &1_000_000);
+            sac_b.mint(&depositor, &2_000_000);
+
+            client.deposit_token(&depositor, &token_a, &1_000_000);
+            client.deposit_token(&depositor, &token_b, &2_000_000);
+
+            assert_eq!(client.get_token_balance(&depositor, &token_a), 1_000_000);
+            assert_eq!(client.get_token_balance(&depositor, &token_b), 2_000_000);
+            // Cross-check: token_a balance is not polluted by token_b deposit
+            assert_eq!(client.get_token_balance(&depositor, &token_a), 1_000_000);
+        }
+
+        // ── test 4: event emitted with correct fields ────────────────────────
+
+        #[test]
+        fn test_deposit_token_emits_event() {
+            let (env, _admin, contract_id, client) = setup_treasury();
+            let (token_address, sac, _tok) = setup_token(&env);
+
+            let depositor = Address::generate(&env);
+            sac.mint(&depositor, &1_000_000);
+
+            client.deposit_token(&depositor, &token_address, &1_000_000);
+
+            let events = env.events().all();
+            let event = events.get(events.len() - 1).unwrap();
+
+            // Correct contract emitted the event
+            assert_eq!(event.0, contract_id);
+
+            // Topics: ("treasury", "dep_tok")
+            let expected_topics: Vec<Val> = vec![
+                &env,
+                symbol_short!("treasury").into_val(&env),
+                symbol_short!("dep_tok").into_val(&env),
+            ];
+            assert_eq!(event.1, expected_topics);
+
+            // Data: (depositor, token_address, amount, new_balance)
+            let expected_data: Vec<Val> = vec![
+                &env,
+                depositor.clone().into_val(&env),
+                token_address.clone().into_val(&env),
+                1_000_000_i128.into_val(&env),
+                1_000_000_i128.into_val(&env),
+            ];
+            let actual_data: Vec<Val> = Vec::try_from_val(&env, &event.2).unwrap();
+            assert_eq!(actual_data, expected_data);
+        }
+
+        // ── test 5: depositor's auth is required ─────────────────────────────
+        //
+        // We verify this by checking env.auths() after a successful call:
+        // the depositor's address must appear in the recorded authorisations.
+        // This confirms that require_auth() is wired up for the `from` argument.
+
+        #[test]
+        fn test_deposit_token_requires_from_auth() {
+            let (env, _admin, _contract_id, client) = setup_treasury();
+            let (token_address, sac, _tok) = setup_token(&env);
+
+            let depositor = Address::generate(&env);
+            sac.mint(&depositor, &500_000);
+
+            client.deposit_token(&depositor, &token_address, &500_000);
+
+            // At least one recorded auth must be from the depositor.
+            let auths = env.auths();
+            let depositor_auth_present = auths.iter().any(|(addr, _)| *addr == depositor);
+            assert!(
+                depositor_auth_present,
+                "deposit_token must require auth from the depositor"
+            );
+        }
+
+        // ── test 6: zero amount is rejected ──────────────────────────────────
+
+        #[test]
+        fn test_deposit_token_zero_amount_rejected() {
+            let (env, _admin, _contract_id, client) = setup_treasury();
+            let (token_address, _sac, _tok) = setup_token(&env);
+
+            let depositor = Address::generate(&env);
+
+            let result = client.try_deposit_token(&depositor, &token_address, &0);
+            assert_eq!(result, Err(Ok(Error::InvalidAmount)));
+        }
+
+        // ── test 7: negative amount is also rejected ──────────────────────────
+
+        #[test]
+        fn test_deposit_token_negative_amount_rejected() {
+            let (env, _admin, _contract_id, client) = setup_treasury();
+            let (token_address, _sac, _tok) = setup_token(&env);
+
+            let depositor = Address::generate(&env);
+
+            let result = client.try_deposit_token(&depositor, &token_address, &-500);
+            assert_eq!(result, Err(Ok(Error::InvalidAmount)));
+        }
     }
 }
