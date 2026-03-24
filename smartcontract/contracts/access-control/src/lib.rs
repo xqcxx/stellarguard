@@ -591,7 +591,7 @@ mod test {
     fn setup_contract() -> (Env, Address, AccessControlContractClient<'static>) {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register(AccessControlContract, ());
+        let contract_id = env.register_contract(None, AccessControlContract);
         let client = AccessControlContractClient::new(&env, &contract_id);
         let owner = Address::generate(&env);
         (env, owner, client)
@@ -664,5 +664,208 @@ mod test {
         client.revoke_role(&owner, &member);
 
         assert_eq!(client.is_member_or_above(&member), false);
+    }
+
+    #[test]
+    fn test_assign_role_privilege_escalation() {
+        let (env, owner, client) = setup_contract();
+
+        client.initialize(&owner);
+
+        let admin = Address::generate(&env);
+        let member = Address::generate(&env);
+        let target = Address::generate(&env);
+
+        client.assign_role(&owner, &admin, &Role::Admin);
+        client.assign_role(&owner, &member, &Role::Member);
+
+        let result = client.try_assign_role(&admin, &target, &Role::Admin);
+        assert_eq!(result, Err(Ok(Error::InsufficientPrivilege)));
+
+        let result = client.try_assign_role(&admin, &target, &Role::Owner);
+        assert_eq!(result, Err(Ok(Error::InsufficientPrivilege)));
+
+        let result = client.try_assign_role(&member, &target, &Role::Viewer);
+        assert_eq!(result, Err(Ok(Error::InsufficientPrivilege)));
+    }
+
+    #[test]
+    fn test_revoke_role_cannot_remove_owner() {
+        let (env, owner, client) = setup_contract();
+
+        client.initialize(&owner);
+
+        let result = client.try_revoke_role(&owner, &owner);
+        assert_eq!(result, Err(Ok(Error::CannotRemoveOwner)));
+
+        let admin = Address::generate(&env);
+        client.assign_role(&owner, &admin, &Role::Admin);
+
+        let result = client.try_revoke_role(&admin, &owner);
+        assert_eq!(result, Err(Ok(Error::CannotRemoveOwner)));
+    }
+
+    #[test]
+    fn test_revoke_admin_requires_owner() {
+        let (env, owner, client) = setup_contract();
+
+        client.initialize(&owner);
+
+        let admin1 = Address::generate(&env);
+        let admin2 = Address::generate(&env);
+
+        client.assign_role(&owner, &admin1, &Role::Admin);
+        client.assign_role(&owner, &admin2, &Role::Admin);
+
+        let result = client.try_revoke_role(&admin1, &admin2);
+        assert_eq!(result, Err(Ok(Error::InsufficientPrivilege)));
+    }
+
+    #[test]
+    fn test_has_permission() {
+        let (env, owner, client) = setup_contract();
+
+        client.initialize(&owner);
+
+        let viewer = Address::generate(&env);
+        let member = Address::generate(&env);
+        let admin = Address::generate(&env);
+        let random_addr = Address::generate(&env);
+
+        client.assign_role(&owner, &admin, &Role::Admin);
+        client.assign_role(&owner, &member, &Role::Member);
+        client.assign_role(&admin, &viewer, &Role::Viewer);
+
+        assert_eq!(client.has_permission(&owner, &Role::Owner), true);
+        assert_eq!(client.has_permission(&owner, &Role::Admin), true);
+        assert_eq!(client.has_permission(&owner, &Role::Member), true);
+        assert_eq!(client.has_permission(&owner, &Role::Viewer), true);
+
+        assert_eq!(client.has_permission(&admin, &Role::Owner), false);
+        assert_eq!(client.has_permission(&admin, &Role::Admin), true);
+        assert_eq!(client.has_permission(&admin, &Role::Member), true);
+
+        assert_eq!(client.has_permission(&member, &Role::Admin), false);
+        assert_eq!(client.has_permission(&member, &Role::Member), true);
+        assert_eq!(client.has_permission(&member, &Role::Viewer), true);
+
+        assert_eq!(client.has_permission(&viewer, &Role::Member), false);
+        assert_eq!(client.has_permission(&viewer, &Role::Viewer), true);
+
+        assert_eq!(client.has_permission(&random_addr, &Role::Viewer), false);
+    }
+
+    #[test]
+    fn test_is_owner() {
+        let (env, owner, client) = setup_contract();
+
+        client.initialize(&owner);
+
+        let admin = Address::generate(&env);
+        let member = Address::generate(&env);
+        let random_addr = Address::generate(&env);
+
+        client.assign_role(&owner, &admin, &Role::Admin);
+        client.assign_role(&owner, &member, &Role::Member);
+
+        assert_eq!(client.is_owner(&owner), true);
+        assert_eq!(client.is_owner(&admin), false);
+        assert_eq!(client.is_owner(&member), false);
+        assert_eq!(client.is_owner(&random_addr), false);
+    }
+
+    #[test]
+    fn test_is_admin_or_above() {
+        let (env, owner, client) = setup_contract();
+
+        client.initialize(&owner);
+
+        let admin = Address::generate(&env);
+        let member = Address::generate(&env);
+        let viewer = Address::generate(&env);
+        let random_addr = Address::generate(&env);
+
+        client.assign_role(&owner, &admin, &Role::Admin);
+        client.assign_role(&owner, &member, &Role::Member);
+        client.assign_role(&admin, &viewer, &Role::Viewer);
+
+        assert_eq!(client.is_admin_or_above(&owner), true);
+        assert_eq!(client.is_admin_or_above(&admin), true);
+        assert_eq!(client.is_admin_or_above(&member), false);
+        assert_eq!(client.is_admin_or_above(&viewer), false);
+        assert_eq!(client.is_admin_or_above(&random_addr), false);
+    }
+
+    #[test]
+    fn test_is_member_or_above() {
+        let (env, owner, client) = setup_contract();
+
+        client.initialize(&owner);
+
+        let admin = Address::generate(&env);
+        let member = Address::generate(&env);
+        let viewer = Address::generate(&env);
+        let random_addr = Address::generate(&env);
+
+        client.assign_role(&owner, &admin, &Role::Admin);
+        client.assign_role(&owner, &member, &Role::Member);
+        client.assign_role(&admin, &viewer, &Role::Viewer);
+
+        assert_eq!(client.is_member_or_above(&owner), true);
+        assert_eq!(client.is_member_or_above(&admin), true);
+        assert_eq!(client.is_member_or_above(&member), true);
+        assert_eq!(client.is_member_or_above(&viewer), false);
+        assert_eq!(client.is_member_or_above(&random_addr), false);
+    }
+
+    #[test]
+    fn test_transfer_ownership() {
+        let (env, owner, client) = setup_contract();
+
+        client.initialize(&owner);
+
+        let new_owner = Address::generate(&env);
+
+        client.transfer_ownership(&owner, &new_owner);
+
+        let summary = client.get_summary();
+        assert_eq!(summary.owner, new_owner);
+
+        let old_owner_role = client.get_role(&owner);
+        assert_eq!(old_owner_role.role, Role::Admin);
+
+        let new_owner_role = client.get_role(&new_owner);
+        assert_eq!(new_owner_role.role, Role::Owner);
+
+        assert_eq!(client.is_owner(&new_owner), true);
+        assert_eq!(client.is_owner(&owner), false);
+        assert_eq!(client.is_admin_or_above(&owner), true);
+    }
+
+    #[test]
+    fn test_transfer_ownership_unauthorized() {
+        let (env, owner, client) = setup_contract();
+
+        client.initialize(&owner);
+
+        let admin = Address::generate(&env);
+        let new_owner = Address::generate(&env);
+
+        client.assign_role(&owner, &admin, &Role::Admin);
+
+        let result = client.try_transfer_ownership(&admin, &new_owner);
+        assert_eq!(result, Err(Ok(Error::Unauthorized)));
+    }
+
+    #[test]
+    fn test_initialize_sets_owner_role() {
+        let (env, owner, client) = setup_contract();
+
+        client.initialize(&owner);
+
+        let role_assignment = client.get_role(&owner);
+        assert_eq!(role_assignment.role, Role::Owner);
+        assert_eq!(role_assignment.address, owner);
+        assert_eq!(role_assignment.assigned_by, owner);
     }
 }
