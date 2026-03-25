@@ -429,6 +429,10 @@ impl GovernanceContract {
             .get(&DataKey::Proposal(proposal_id))
             .ok_or(Error::ProposalNotFound)?;
 
+        if proposal.status == ProposalStatus::Executed {
+            return Err(Error::AlreadyExecuted);
+        }
+
         if proposal.status != ProposalStatus::Passed {
             return Err(Error::ProposalRejected);
         }
@@ -912,7 +916,7 @@ mod test {
         client.execute_proposal(&admin, &proposal_id);
 
         let result = client.try_execute_proposal(&admin, &proposal_id);
-        assert_eq!(result, Err(Ok(Error::ProposalRejected)));
+        assert_eq!(result, Err(Ok(Error::AlreadyExecuted)));
     }
 
     #[test]
@@ -942,5 +946,99 @@ mod test {
         client.finalize(&member1, &proposal_id);
 
         client.execute_proposal(&admin, &proposal_id);
+    }
+
+    #[test]
+    fn test_finalize_rejected() {
+        let (env, admin, client) = setup_contract();
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone(), member2.clone()]);
+        client.initialize(&admin, &members, &50, &10);
+
+        let proposal_id = client.create_proposal(
+            &member1,
+            &symbol_short!("test"),
+            &symbol_short!("test"),
+            &ProposalAction::General,
+            &0,
+            &member1,
+        );
+
+        client.vote(&member1, &proposal_id, &false); // Against
+        client.vote(&member2, &proposal_id, &false); // Against
+
+        env.ledger().set_sequence_number(100);
+
+        let status = client.finalize(&member1, &proposal_id);
+        assert_eq!(status, ProposalStatus::Rejected);
+    }
+
+    #[test]
+    fn test_finalize_expired_quorum_not_met() {
+        let (env, admin, client) = setup_contract();
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone(), member2.clone()]);
+        client.initialize(&admin, &members, &100, &10); // 100% quorum required
+
+        let proposal_id = client.create_proposal(
+            &member1,
+            &symbol_short!("test"),
+            &symbol_short!("test"),
+            &ProposalAction::General,
+            &0,
+            &member1,
+        );
+
+        client.vote(&member1, &proposal_id, &true);
+        // member2 doesn't vote
+
+        env.ledger().set_sequence_number(100);
+
+        let status = client.finalize(&member1, &proposal_id);
+        assert_eq!(status, ProposalStatus::Expired);
+    }
+
+    #[test]
+    fn test_vote_closed_period_ended() {
+        let (env, admin, client) = setup_contract();
+        let member1 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone()]);
+        client.initialize(&admin, &members, &50, &10);
+
+        let proposal_id = client.create_proposal(
+            &member1,
+            &symbol_short!("test"),
+            &symbol_short!("test"),
+            &ProposalAction::General,
+            &0,
+            &member1,
+        );
+
+        env.ledger().set_sequence_number(100);
+
+        let result = client.try_vote(&member1, &proposal_id, &true);
+        assert_eq!(result, Err(Ok(Error::VotingClosed)));
+    }
+
+    #[test]
+    fn test_transfer_admin() {
+        let (env, admin, client) = setup_contract();
+        client.initialize(&admin, &Vec::new(&env), &50, &10);
+
+        let new_admin = Address::generate(&env);
+        client.transfer_admin(&admin, &new_admin);
+
+        assert_eq!(client.get_config().admin, new_admin);
+    }
+
+    #[test]
+    fn test_set_quorum() {
+        let (env, admin, client) = setup_contract();
+        client.initialize(&admin, &Vec::new(&env), &50, &10);
+
+        client.set_quorum(&admin, &75);
+        assert_eq!(client.get_config().quorum_percent, 75);
     }
 }

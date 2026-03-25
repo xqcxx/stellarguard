@@ -1270,4 +1270,98 @@ mod test {
             assert_eq!(result, Err(Ok(Error::InvalidAmount)));
         }
     }
+
+    // =========================================================================
+    // Signer & Admin Management Tests
+    // =========================================================================
+
+    #[test]
+    fn test_add_signer() {
+        let (env, admin, _contract_id, client) = setup_contract();
+        let signer1 = Address::generate(&env);
+        client.initialize(&admin, &1, &vec![&env, signer1.clone()]);
+
+        let new_signer = Address::generate(&env);
+        client.add_signer(&admin, &new_signer);
+
+        let signers = client.get_signers();
+        assert_eq!(signers.len(), 2);
+        assert!(signers.contains(new_signer));
+    }
+
+    #[test]
+    fn test_add_signer_unauthorized() {
+        let (env, admin, _contract_id, client) = setup_contract();
+        let signer1 = Address::generate(&env);
+        client.initialize(&admin, &1, &vec![&env, signer1.clone()]);
+
+        let non_admin = Address::generate(&env);
+        let new_signer = Address::generate(&env);
+        let result = client.try_add_signer(&non_admin, &new_signer);
+        assert_eq!(result, Err(Ok(Error::Unauthorized)));
+    }
+
+    #[test]
+    fn test_remove_signer() {
+        let (env, admin, _contract_id, client) = setup_contract();
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        client.initialize(&admin, &1, &vec![&env, signer1.clone(), signer2.clone()]);
+
+        client.remove_signer(&admin, &signer2);
+
+        let signers = client.get_signers();
+        assert_eq!(signers.len(), 1);
+        assert_eq!(signers.get(0).unwrap(), signer1);
+    }
+
+    #[test]
+    fn test_remove_signer_threshold_breach() {
+        let (env, admin, _contract_id, client) = setup_contract();
+        let signer1 = Address::generate(&env);
+        client.initialize(&admin, &1, &vec![&env, signer1.clone()]);
+
+        let result = client.try_remove_signer(&admin, &signer1);
+        assert_eq!(result, Err(Ok(Error::ThresholdBreach)));
+    }
+
+    #[test]
+    fn test_set_threshold() {
+        let (env, admin, _contract_id, client) = setup_contract();
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        client.initialize(&admin, &1, &vec![&env, signer1, signer2]);
+
+        client.set_threshold(&admin, &2);
+        assert_eq!(client.get_config().threshold, 2);
+    }
+
+    #[test]
+    fn test_set_threshold_invalid() {
+        let (env, admin, _contract_id, client) = setup_contract();
+        let signer1 = Address::generate(&env);
+        client.initialize(&admin, &1, &vec![&env, signer1]);
+
+        let result = client.try_set_threshold(&admin, &2); // Threshold > signer count
+        assert_eq!(result, Err(Ok(Error::InvalidThreshold)));
+
+        let result = client.try_set_threshold(&admin, &0); // Threshold == 0
+        assert_eq!(result, Err(Ok(Error::InvalidThreshold)));
+    }
+
+    #[test]
+    fn test_transfer_admin() {
+        let (env, admin, _contract_id, client) = setup_contract();
+        let signer1 = Address::generate(&env);
+        client.initialize(&admin, &1, &vec![&env, signer1]);
+
+        let new_admin = Address::generate(&env);
+        client.transfer_admin(&admin, &new_admin);
+
+        assert_eq!(client.get_config().admin, new_admin);
+
+        // Old admin should fail now
+        let result = client.try_set_threshold(&admin, &1);
+        assert_eq!(result, Err(Ok(Error::Unauthorized)));
+    }
 }
