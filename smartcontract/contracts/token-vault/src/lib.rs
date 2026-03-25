@@ -721,6 +721,7 @@ mod test {
     use super::*;
     use soroban_sdk::testutils::Address as _;
     use soroban_sdk::testutils::Events as _;
+    use soroban_sdk::testutils::Ledger as _;
     use soroban_sdk::{vec, Env, IntoVal, TryFromVal, Val, Vec};
 
     fn setup_contract() -> (Env, Address, Address, TokenVaultContractClient<'static>) {
@@ -797,6 +798,112 @@ mod test {
         assert_eq!(schedule.total_amount, 10_000_000);
         assert_eq!(schedule.claimed_amount, 0);
         assert_eq!(schedule.beneficiary, beneficiary);
+    }
+
+    #[test]
+    fn test_create_vesting_emits_event() {
+        let (env, admin, contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone()]);
+        client.initialize(&admin, &signers, &1);
+
+        let beneficiary = Address::generate(&env);
+        let vesting_id = client.create_vesting(
+            &admin,
+            &beneficiary,
+            &1_200_000,
+            &120,
+            &30,
+            &symbol_short!("team"),
+        );
+
+        let events = env.events().all();
+        let event = events.get(events.len() - 1).unwrap();
+        assert_eq!(event.0, contract_id);
+        let expected_topics: Vec<Val> = vec![
+            &env,
+            symbol_short!("vault").into_val(&env),
+            symbol_short!("vest").into_val(&env),
+        ];
+        assert_eq!(event.1, expected_topics);
+        let expected_data: Vec<Val> = vec![
+            &env,
+            vesting_id.into_val(&env),
+            beneficiary.into_val(&env),
+            1_200_000i128.into_val(&env),
+            120u64.into_val(&env),
+        ];
+        let actual_data: Vec<Val> = Vec::try_from_val(&env, &event.2).unwrap();
+        assert_eq!(actual_data, expected_data);
+    }
+
+    #[test]
+    fn test_claim_vested_requires_cliff_then_allows_partial_and_full_claims() {
+        let (env, admin, contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone()]);
+        client.initialize(&admin, &signers, &1);
+
+        let start_time = 1_000;
+        env.ledger().set_timestamp(start_time);
+
+        let beneficiary = Address::generate(&env);
+        let vesting_id = client.create_vesting(
+            &admin,
+            &beneficiary,
+            &1_200_000,
+            &120,
+            &30,
+            &symbol_short!("hire"),
+        );
+
+        env.ledger().set_timestamp(start_time + 29);
+        let before_cliff = client.try_claim_vested(&beneficiary, &vesting_id);
+        assert_eq!(before_cliff, Err(Ok(Error::NothingToClaim)));
+
+        env.ledger().set_timestamp(start_time + 60);
+        let partial_claim = client.claim_vested(&beneficiary, &vesting_id);
+        assert_eq!(partial_claim, 600_000);
+
+        let schedule = client.get_vesting(&vesting_id);
+        assert_eq!(schedule.claimed_amount, 600_000);
+
+        let stats = client.get_stats();
+        assert_eq!(stats.total_locked, 600_000);
+
+        let events = env.events().all();
+        let event = events.get(events.len() - 1).unwrap();
+        assert_eq!(event.0, contract_id);
+        let expected_topics: Vec<Val> = vec![
+            &env,
+            symbol_short!("vault").into_val(&env),
+            symbol_short!("v_claim").into_val(&env),
+        ];
+        assert_eq!(event.1, expected_topics);
+        let expected_data: Vec<Val> = vec![
+            &env,
+            vesting_id.into_val(&env),
+            beneficiary.clone().into_val(&env),
+            600_000i128.into_val(&env),
+        ];
+        let actual_data: Vec<Val> = Vec::try_from_val(&env, &event.2).unwrap();
+        assert_eq!(actual_data, expected_data);
+
+        env.ledger().set_timestamp(start_time + 120);
+        let final_claim = client.claim_vested(&beneficiary, &vesting_id);
+        assert_eq!(final_claim, 600_000);
+
+        let schedule = client.get_vesting(&vesting_id);
+        assert_eq!(schedule.claimed_amount, 1_200_000);
+
+        let stats = client.get_stats();
+        assert_eq!(stats.total_locked, 0);
+
+        env.ledger().set_timestamp(start_time + 130);
+        let after_full_claim = client.try_claim_vested(&beneficiary, &vesting_id);
+        assert_eq!(after_full_claim, Err(Ok(Error::NothingToClaim)));
     }
 
     #[test]

@@ -239,12 +239,12 @@ This document tracks all smart contract development tasks for the StellarGuard m
 **Labels:** `smart-contract`, `logic`
 **Description:** Implement vesting schedules with cliff periods.
 - **Tasks:**
-  - [ ] Implement `create_vesting(env, admin, beneficiary, total_amount, duration, cliff, memo)`.
-  - [ ] Implement `claim_vested(env, beneficiary, vesting_id)`.
-  - [ ] Calculate vested amount: `(total_amount * elapsed) / duration`.
-  - [ ] Enforce cliff period: no claims before `start_time + cliff`.
-  - [ ] Track `claimed_amount` to prevent over-claiming.
-  - [ ] Emit `(vault, vest)` and `(vault, v_claim)` events.
+  - [x] Implement `create_vesting(env, admin, beneficiary, total_amount, duration, cliff, memo)`. (@Chucks1093 - 2026-03-25 23:06 UTC)
+  - [x] Implement `claim_vested(env, beneficiary, vesting_id)`. (@Chucks1093 - 2026-03-25 23:06 UTC)
+  - [x] Calculate vested amount: `(total_amount * elapsed) / duration`. (@Chucks1093 - 2026-03-25 23:06 UTC)
+  - [x] Enforce cliff period: no claims before `start_time + cliff`. (@Chucks1093 - 2026-03-25 23:06 UTC)
+  - [x] Track `claimed_amount` to prevent over-claiming. (@Chucks1093 - 2026-03-25 23:06 UTC)
+  - [x] Emit `(vault, vest)` and `(vault, v_claim)` events. (@Chucks1093 - 2026-03-25 23:06 UTC)
 
 ### Issue #SC-21: Emergency Unlock (Multi-Sig)
 **Priority:** Medium
