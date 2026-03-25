@@ -251,13 +251,13 @@ This document tracks all smart contract development tasks for the StellarGuard m
 **Labels:** `smart-contract`, `logic`
 **Description:** Implement multi-sig emergency unlock for locked tokens.
 - **Tasks:**
-  - [ ] Implement `approve_emergency(env, signer, lock_id)`.
-  - [ ] Verify signer is an emergency signer.
-  - [ ] Track per-lock emergency approvals.
-  - [ ] Implement `emergency_unlock(env, caller, lock_id)`.
-  - [ ] Check approval count meets `EmergencyThreshold`.
-  - [ ] Release locked tokens.
-  - [ ] Emit `(vault, emrg_ap)` and `(vault, emrg_ex)` events.
+  - [x] Implement `approve_emergency(env, signer, lock_id)`. (@sshdopey - 2026-03-25 16:45 UTC)
+  - [x] Verify signer is an emergency signer. (@sshdopey - 2026-03-25 16:45 UTC)
+  - [x] Track per-lock emergency approvals. (@sshdopey - 2026-03-25 16:45 UTC)
+  - [x] Implement `emergency_unlock(env, caller, lock_id)`. (@sshdopey - 2026-03-25 16:45 UTC)
+  - [x] Check approval count meets `EmergencyThreshold`. (@sshdopey - 2026-03-25 16:45 UTC)
+  - [x] Release locked tokens. (@sshdopey - 2026-03-25 16:45 UTC)
+  - [x] Emit `(vault, emrg_ap)` and `(vault, emrg_ex)` events. (@sshdopey - 2026-03-25 16:45 UTC)
 
 ---
 
