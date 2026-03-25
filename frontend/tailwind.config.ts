@@ -23,6 +23,7 @@ const config: Config = {
         stellar: {
           blue: "#3b5cf7",
           purple: "#7c3aed",
+          pink: "#ff0080",
           dark: "#0f0f23",
           darker: "#0a0a1a",
           card: "#1a1a2e",
@@ -32,6 +33,17 @@ const config: Config = {
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
+      },
+      backgroundImage: {
+        "glass-gradient": "linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%)",
+        "stellar-gradient": "linear-gradient(90deg, #3b5cf7 0%, #7c3aed 100%)",
+      },
+      boxShadow: {
+        "glass": "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+        "stellar": "0 0 20px rgba(59, 92, 247, 0.3)",
+      },
+      backdropBlur: {
+        xs: "2px",
       },
     },
   },

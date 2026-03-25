@@ -12,7 +12,7 @@ export const WalletConnect = () => {
         href="https://www.freighter.app/" 
         target="_blank" 
         rel="noopener noreferrer"
-        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium"
+        className="btn-primary text-sm"
       >
         Install Freighter
       </a>
@@ -21,7 +21,7 @@ export const WalletConnect = () => {
 
   if (isConnecting) {
     return (
-      <button disabled className="px-4 py-2 bg-stellar-dark text-gray-400 border border-stellar-border rounded-lg cursor-not-allowed text-sm font-medium">
+      <button disabled className="btn-secondary text-sm opacity-50 cursor-not-allowed">
         Connecting...
       </button>
     );
@@ -30,7 +30,7 @@ export const WalletConnect = () => {
   if (address) {
     return (
       <div className="flex items-center space-x-3">
-        <div className="text-sm font-mono bg-stellar-dark/50 px-3 py-1.5 rounded-lg border border-stellar-border text-purple-400">
+        <div className="text-sm font-mono bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-stellar-blue">
           {address.slice(0, 4)}...{address.slice(-4)}
         </div>
         <button 
@@ -47,7 +47,7 @@ export const WalletConnect = () => {
     <div className="flex flex-col items-end space-y-1">
       <button 
         onClick={connect}
-        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-purple-500/20"
+        className="btn-primary text-sm"
       >
         Connect Wallet
       </button>
