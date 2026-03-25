@@ -1,9 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, contracterror, symbol_short,
-    Address, Env, Symbol, Vec,
-    log,
+    contract, contracterror, contractimpl, contracttype, log, symbol_short, Address, Env, Symbol,
+    Vec,
 };
 
 // ============================================================================
@@ -162,15 +161,11 @@ impl TokenVaultContract {
         env.storage()
             .instance()
             .set(&DataKey::EmergencyThreshold, &emergency_threshold);
-        env.storage()
-            .instance()
-            .set(&DataKey::LockCounter, &0_u64);
+        env.storage().instance().set(&DataKey::LockCounter, &0_u64);
         env.storage()
             .instance()
             .set(&DataKey::VestingCounter, &0_u64);
-        env.storage()
-            .instance()
-            .set(&DataKey::TotalLocked, &0_i128);
+        env.storage().instance().set(&DataKey::TotalLocked, &0_i128);
 
         env.events().publish(
             (symbol_short!("vault"), symbol_short!("init")),
@@ -251,7 +246,13 @@ impl TokenVaultContract {
             (lock_id, owner.clone(), amount, duration),
         );
 
-        log!(&env, "Tokens locked: {} for {} seconds (lock #{})", amount, duration, lock_id);
+        log!(
+            &env,
+            "Tokens locked: {} for {} seconds (lock #{})",
+            amount,
+            duration,
+            lock_id
+        );
         Ok(lock_id)
     }
 
@@ -307,7 +308,13 @@ impl TokenVaultContract {
             (lock_id, owner.clone(), amount),
         );
 
-        log!(&env, "Lock #{} claimed by {:?}: {} tokens", lock_id, owner, amount);
+        log!(
+            &env,
+            "Lock #{} claimed by {:?}: {} tokens",
+            lock_id,
+            owner,
+            amount
+        );
         Ok(amount)
     }
 
@@ -317,11 +324,7 @@ impl TokenVaultContract {
 
     /// Approve an emergency unlock for a specific lock.
     /// Requires multi-sig from emergency signers.
-    pub fn approve_emergency(
-        env: Env,
-        signer: Address,
-        lock_id: u64,
-    ) -> Result<u32, Error> {
+    pub fn approve_emergency(env: Env, signer: Address, lock_id: u64) -> Result<u32, Error> {
         Self::require_initialized(&env)?;
 
         signer.require_auth();
@@ -384,11 +387,7 @@ impl TokenVaultContract {
     }
 
     /// Execute emergency unlock after enough approvals.
-    pub fn emergency_unlock(
-        env: Env,
-        caller: Address,
-        lock_id: u64,
-    ) -> Result<i128, Error> {
+    pub fn emergency_unlock(env: Env, caller: Address, lock_id: u64) -> Result<i128, Error> {
         Self::require_initialized(&env)?;
 
         caller.require_auth();
@@ -521,16 +520,19 @@ impl TokenVaultContract {
             (vesting_id, beneficiary.clone(), total_amount, duration),
         );
 
-        log!(&env, "Vesting #{} created for {:?}: {} over {} seconds", vesting_id, beneficiary, total_amount, duration);
+        log!(
+            &env,
+            "Vesting #{} created for {:?}: {} over {} seconds",
+            vesting_id,
+            beneficiary,
+            total_amount,
+            duration
+        );
         Ok(vesting_id)
     }
 
     /// Claim available vested tokens.
-    pub fn claim_vested(
-        env: Env,
-        beneficiary: Address,
-        vesting_id: u64,
-    ) -> Result<i128, Error> {
+    pub fn claim_vested(env: Env, beneficiary: Address, vesting_id: u64) -> Result<i128, Error> {
         Self::require_initialized(&env)?;
 
         beneficiary.require_auth();
@@ -576,7 +578,11 @@ impl TokenVaultContract {
             .instance()
             .get(&DataKey::TotalLocked)
             .unwrap_or(0);
-        let new_total = if total > claimable { total - claimable } else { 0 };
+        let new_total = if total > claimable {
+            total - claimable
+        } else {
+            0
+        };
         env.storage()
             .instance()
             .set(&DataKey::TotalLocked, &new_total);
@@ -657,9 +663,7 @@ impl TokenVaultContract {
 
         current_admin.require_auth();
 
-        env.storage()
-            .instance()
-            .set(&DataKey::Admin, &new_admin);
+        env.storage().instance().set(&DataKey::Admin, &new_admin);
 
         env.events().publish(
             (symbol_short!("vault"), symbol_short!("admin")),
@@ -716,20 +720,21 @@ impl TokenVaultContract {
 mod test {
     use super::*;
     use soroban_sdk::testutils::Address as _;
-    use soroban_sdk::Env;
+    use soroban_sdk::testutils::Events as _;
+    use soroban_sdk::{vec, Env, IntoVal, TryFromVal, Val, Vec};
 
-    fn setup_contract() -> (Env, Address, TokenVaultContractClient<'static>) {
+    fn setup_contract() -> (Env, Address, Address, TokenVaultContractClient<'static>) {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register(TokenVaultContract, ());
+        let contract_id = env.register_contract(None, TokenVaultContract);
         let client = TokenVaultContractClient::new(&env, &contract_id);
         let admin = Address::generate(&env);
-        (env, admin, client)
+        (env, admin, contract_id, client)
     }
 
     #[test]
     fn test_initialize() {
-        let (env, admin, client) = setup_contract();
+        let (env, admin, _contract_id, client) = setup_contract();
 
         let signer1 = Address::generate(&env);
         let signers = Vec::from_array(&env, [signer1.clone()]);
@@ -744,7 +749,7 @@ mod test {
 
     #[test]
     fn test_lock_tokens() {
-        let (env, admin, client) = setup_contract();
+        let (env, admin, _contract_id, client) = setup_contract();
 
         let signer1 = Address::generate(&env);
         let signers = Vec::from_array(&env, [signer1.clone()]);
@@ -770,7 +775,7 @@ mod test {
 
     #[test]
     fn test_create_vesting() {
-        let (env, admin, client) = setup_contract();
+        let (env, admin, _contract_id, client) = setup_contract();
 
         let signer1 = Address::generate(&env);
         let signers = Vec::from_array(&env, [signer1.clone()]);
@@ -792,5 +797,135 @@ mod test {
         assert_eq!(schedule.total_amount, 10_000_000);
         assert_eq!(schedule.claimed_amount, 0);
         assert_eq!(schedule.beneficiary, beneficiary);
+    }
+
+    #[test]
+    fn test_approve_emergency() {
+        let (env, admin, contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone(), signer2.clone()]);
+        client.initialize(&admin, &signers, &2);
+
+        let owner = Address::generate(&env);
+        let lock_id = client.lock_tokens(&owner, &1_000_000, &86400, &symbol_short!("team"));
+
+        let approval_count = client.approve_emergency(&signer1, &lock_id);
+        assert_eq!(approval_count, 1);
+
+        let lock = client.get_lock(&lock_id);
+        assert_eq!(lock.claimed, false);
+
+        let events = env.events().all();
+        let event = events.get(events.len() - 1).unwrap();
+        assert_eq!(event.0, contract_id);
+        let expected_topics: Vec<Val> = vec![
+            &env,
+            symbol_short!("vault").into_val(&env),
+            symbol_short!("emrg_ap").into_val(&env),
+        ];
+        assert_eq!(event.1, expected_topics);
+        let expected_data: Vec<Val> = vec![
+            &env,
+            lock_id.into_val(&env),
+            signer1.into_val(&env),
+            1u32.into_val(&env),
+        ];
+        let actual_data: Vec<Val> = Vec::try_from_val(&env, &event.2).unwrap();
+        assert_eq!(actual_data, expected_data);
+    }
+
+    #[test]
+    fn test_approve_emergency_rejects_non_signer() {
+        let (env, admin, _contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone()]);
+        client.initialize(&admin, &signers, &1);
+
+        let owner = Address::generate(&env);
+        let lock_id = client.lock_tokens(&owner, &500_000, &3600, &symbol_short!("ops"));
+
+        let outsider = Address::generate(&env);
+        let result = client.try_approve_emergency(&outsider, &lock_id);
+        assert_eq!(result, Err(Ok(Error::Unauthorized)));
+    }
+
+    #[test]
+    fn test_emergency_unlock_requires_threshold() {
+        let (env, admin, _contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone(), signer2.clone()]);
+        client.initialize(&admin, &signers, &2);
+
+        let owner = Address::generate(&env);
+        let lock_id = client.lock_tokens(&owner, &750_000, &7200, &symbol_short!("team"));
+
+        client.approve_emergency(&signer1, &lock_id);
+
+        let result = client.try_emergency_unlock(&owner, &lock_id);
+        assert_eq!(result, Err(Ok(Error::EmergencyNotApproved)));
+    }
+
+    #[test]
+    fn test_emergency_unlock() {
+        let (env, admin, contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone(), signer2.clone()]);
+        client.initialize(&admin, &signers, &2);
+
+        let owner = Address::generate(&env);
+        let lock_id = client.lock_tokens(&owner, &900_000, &86400, &symbol_short!("team"));
+
+        client.approve_emergency(&signer1, &lock_id);
+        client.approve_emergency(&signer2, &lock_id);
+
+        let unlocked = client.emergency_unlock(&owner, &lock_id);
+        assert_eq!(unlocked, 900_000);
+
+        let lock = client.get_lock(&lock_id);
+        assert_eq!(lock.claimed, true);
+
+        let stats = client.get_stats();
+        assert_eq!(stats.total_locked, 0);
+
+        let events = env.events().all();
+        let event = events.get(events.len() - 1).unwrap();
+        assert_eq!(event.0, contract_id);
+        let expected_topics: Vec<Val> = vec![
+            &env,
+            symbol_short!("vault").into_val(&env),
+            symbol_short!("emrg_ex").into_val(&env),
+        ];
+        assert_eq!(event.1, expected_topics);
+        let expected_data: Vec<Val> = vec![
+            &env,
+            lock_id.into_val(&env),
+            owner.into_val(&env),
+            900_000i128.into_val(&env),
+        ];
+        let actual_data: Vec<Val> = Vec::try_from_val(&env, &event.2).unwrap();
+        assert_eq!(actual_data, expected_data);
+    }
+
+    #[test]
+    fn test_duplicate_emergency_approval_is_rejected() {
+        let (env, admin, _contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone()]);
+        client.initialize(&admin, &signers, &1);
+
+        let owner = Address::generate(&env);
+        let lock_id = client.lock_tokens(&owner, &250_000, &1800, &symbol_short!("ops"));
+
+        client.approve_emergency(&signer1, &lock_id);
+        let result = client.try_approve_emergency(&signer1, &lock_id);
+        assert_eq!(result, Err(Ok(Error::AlreadyApprovedEmergency)));
     }
 }
