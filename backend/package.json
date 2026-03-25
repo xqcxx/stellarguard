@@ -1,0 +1,23 @@
+{
+  "name": "stellarguard-backend",
+  "version": "0.1.0",
+  "description": "Soroban event listener and indexer for StellarGuard",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "migrate": "ts-node src/db.ts"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^12.3.0",
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/pg": "^8.11.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}
