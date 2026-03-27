@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function ProposalDetailPage({
   params,
 }: {
@@ -6,12 +8,12 @@ export default function ProposalDetailPage({
   return (
     <div className="space-y-8">
       {/* Back Link */}
-      <a
+      <Link
         href="/governance"
         className="text-primary-400 hover:text-primary-300 text-sm"
       >
         ← Back to Governance
-      </a>
+      </Link>
 
       {/* Proposal Header */}
       {/* TODO: [FE-15] Fetch real proposal data from Soroban */}

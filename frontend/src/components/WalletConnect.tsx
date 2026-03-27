@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useFreighter } from "@/context/FreighterProvider";
+import { formatAddress } from "@/lib/formatters";
 
 export const WalletConnect = () => {
   const { address, isConnecting, connect, disconnect, isFreighterInstalled, error } = useFreighter();
@@ -31,7 +32,7 @@ export const WalletConnect = () => {
     return (
       <div className="flex items-center space-x-3">
         <div className="text-sm font-mono bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-stellar-blue">
-          {address.slice(0, 4)}...{address.slice(-4)}
+          {formatAddress(address)}
         </div>
         <button 
           onClick={disconnect}

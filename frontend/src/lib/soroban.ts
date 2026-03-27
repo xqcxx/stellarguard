@@ -12,6 +12,7 @@ import {
   xdr,
 } from "@stellar/stellar-sdk";
 import { signTransaction } from "@stellar/freighter-api";
+import { requirePublicEnv } from "./env";
 import { SOROBAN_RPC_URL, NETWORK_PASSPHRASE } from "./network";
 
 // ============================================================================
@@ -19,10 +20,10 @@ import { SOROBAN_RPC_URL, NETWORK_PASSPHRASE } from "./network";
 // ============================================================================
 
 export const CONTRACT_IDS = {
-  treasury: "PLACEHOLDER_TREASURY_CONTRACT_ID",
-  governance: "PLACEHOLDER_GOVERNANCE_CONTRACT_ID",
-  tokenVault: "PLACEHOLDER_TOKEN_VAULT_CONTRACT_ID",
-  accessControl: "PLACEHOLDER_ACCESS_CONTROL_CONTRACT_ID",
+  treasury: requirePublicEnv("NEXT_PUBLIC_TREASURY_CONTRACT_ID"),
+  governance: requirePublicEnv("NEXT_PUBLIC_GOVERNANCE_CONTRACT_ID"),
+  tokenVault: requirePublicEnv("NEXT_PUBLIC_VAULT_CONTRACT_ID"),
+  accessControl: requirePublicEnv("NEXT_PUBLIC_ACL_CONTRACT_ID"),
 } as const;
 
 // ============================================================================

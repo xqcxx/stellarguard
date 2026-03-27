@@ -1,6 +1,9 @@
 // TODO: [FE-13] Implement ProposalCard with real data
 // TODO: [FE-17] Implement status badge colors
 
+import Link from "next/link";
+import { formatAddress } from "@/lib/formatters";
+
 interface ProposalCardProps {
   /** Proposal ID */
   id?: number;
@@ -45,13 +48,8 @@ export function ProposalCard({
   const totalVotes = votesFor + votesAgainst;
   const forPercent = totalVotes > 0 ? (votesFor / totalVotes) * 100 : 0;
 
-  const truncateAddress = (addr: string): string => {
-    if (addr.length <= 12) return addr;
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
-
   return (
-    <a href={`/proposals/${id}`} className="block">
+    <Link href={`/proposals/${id}`} className="block">
       <div className="card hover:border-primary-600/50 transition-colors cursor-pointer">
         <div className="flex justify-between items-start">
           <div className="flex-1">
@@ -68,7 +66,7 @@ export function ProposalCard({
               <p className="text-gray-400 text-sm mt-1">{description}</p>
             )}
             <p className="text-gray-500 text-xs mt-2">
-              by {truncateAddress(proposer)}
+              by {formatAddress(proposer, { startChars: 6, endChars: 4 })}
             </p>
           </div>
           <div className="text-right ml-4">
@@ -92,6 +90,6 @@ export function ProposalCard({
           </div>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }

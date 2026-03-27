@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./globals.css";
 import { FreighterProvider } from "@/context/FreighterProvider";
 import { WalletConnect } from "@/components/WalletConnect";
@@ -52,19 +53,19 @@ export default function RootLayout({
           <nav className="border-b border-white/5 bg-stellar-darker/60 backdrop-blur-xl sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between h-20 items-center">
-                <div className="flex items-center space-x-3 group cursor-pointer">
+                <Link href="/" className="flex items-center space-x-3 group cursor-pointer">
                   <div className="w-10 h-10 bg-stellar-gradient rounded-xl flex items-center justify-center shadow-stellar group-hover:scale-110 transition-transform duration-300">
                     <span className="text-xl">🛡️</span>
                   </div>
                   <span className="text-2xl font-bold gradient-text tracking-tight">
                     StellarGuard
                   </span>
-                </div>
+                </Link>
                 
                 <div className="hidden md:flex items-center space-x-1">
-                  <a href="/" className="nav-link px-4">Dashboard</a>
-                  <a href="/treasury" className="nav-link px-4">Treasury</a>
-                  <a href="/governance" className="nav-link px-4">Governance</a>
+                  <Link href="/" className="nav-link px-4">Dashboard</Link>
+                  <Link href="/treasury" className="nav-link px-4">Treasury</Link>
+                  <Link href="/governance" className="nav-link px-4">Governance</Link>
                 </div>
 
                 <div className="flex items-center space-x-6">

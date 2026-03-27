@@ -1,6 +1,8 @@
 // TODO: [FE-11] Implement TreasuryCard with real data
 // TODO: [FE-9] Add approval button functionality
 
+import { formatAddress, formatXlm } from "@/lib/formatters";
+
 interface TreasuryCardProps {
   /** Transaction ID */
   txId?: number;
@@ -31,15 +33,6 @@ export function TreasuryCard({
   threshold = 1,
   executed = false,
 }: TreasuryCardProps) {
-  const formatXLM = (stroops: number): string => {
-    return (stroops / 10_000_000).toFixed(2);
-  };
-
-  const truncateAddress = (addr: string): string => {
-    if (addr.length <= 12) return addr;
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
-
   const statusColor = executed
     ? "text-gray-400"
     : approvals >= threshold
@@ -62,7 +55,7 @@ export function TreasuryCard({
           </span>
         </div>
         <p className="text-white font-semibold mt-1">
-          {formatXLM(amount)} XLM → {truncateAddress(to)}
+          {formatXlm(amount)} XLM → {formatAddress(to, { startChars: 6, endChars: 4 })}
         </p>
         {memo && <p className="text-gray-400 text-sm mt-0.5">{memo}</p>}
       </div>

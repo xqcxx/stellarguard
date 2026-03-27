@@ -103,6 +103,8 @@ NEXT_PUBLIC_VAULT_CONTRACT_ID=<deployed-contract-id>
 NEXT_PUBLIC_ACL_CONTRACT_ID=<deployed-contract-id>
 ```
 
+These contract ID variables are required at runtime. The app now throws a clear startup/runtime error when any `NEXT_PUBLIC_*_CONTRACT_ID` value is missing so misconfigured deployments fail fast instead of silently using placeholders.
+
 ---
 
 ## Key Concepts

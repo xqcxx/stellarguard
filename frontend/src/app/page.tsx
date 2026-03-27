@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div className="space-y-8">
@@ -11,12 +13,12 @@ export default function Home() {
           Manage shared funds with configurable approval thresholds on Stellar.
         </p>
         <div className="flex justify-center space-x-4">
-          <a href="/treasury" className="btn-primary text-lg px-8 py-3">
+          <Link href="/treasury" className="btn-primary text-lg px-8 py-3">
             Open Treasury
-          </a>
-          <a href="/governance" className="btn-secondary text-lg px-8 py-3">
+          </Link>
+          <Link href="/governance" className="btn-secondary text-lg px-8 py-3">
             View Proposals
-          </a>
+          </Link>
         </div>
       </section>
 
