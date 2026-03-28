@@ -1,5 +1,8 @@
 /**
  * Soroban contract interaction helpers.
+ *
+ * Low-level RPC operations are delegated to `sorobanClient` so that all hooks
+ * share a single, configurable polling strategy.
  */
 
 import {
@@ -17,6 +20,7 @@ import type { Decoder, GovernanceProposalAction } from "./contractData";
 import { readPublicEnv, requirePublicEnv } from "./env";
 import { throwIfAborted } from "./requestGuard";
 import { SOROBAN_RPC_URL, NETWORK_PASSPHRASE } from "./network";
+import { sorobanClient } from "./sorobanClient";
 
 // ============================================================================
 // Contract IDs
@@ -33,7 +37,7 @@ const READONLY_SIMULATION_ACCOUNT_ENV =
   "NEXT_PUBLIC_SOROBAN_SIMULATION_ACCOUNT";
 
 // ============================================================================
-// Server Instance
+// Server Instance (kept for backward-compat; prefer sorobanClient in new code)
 // ============================================================================
 
 const server = new SorobanRpc.Server(SOROBAN_RPC_URL);
@@ -56,7 +60,7 @@ export async function buildContractCall(
   args: xdr.ScVal[],
   sourceAddress: string,
 ): Promise<TransactionBuilder> {
-  const account = await server.getAccount(sourceAddress);
+  const account = await sorobanClient.getAccount(sourceAddress);
   const contract = new Contract(contractId);
 
   const tx = new TransactionBuilder(account, {
@@ -81,31 +85,9 @@ export async function signAndSubmit(
     NETWORK_PASSPHRASE,
   ) as Transaction;
 
-  const sendResponse = await server.sendTransaction(signedTx);
-
-  if (sendResponse.status === "ERROR") {
-    throw new Error(`Transaction submission failed: ${sendResponse.status}`);
-  }
-
-  // Poll for transaction result
-  const hash = sendResponse.hash;
-  let getResponse: SorobanRpc.Api.GetTransactionResponse;
-
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    getResponse = await server.getTransaction(hash);
-
-    if (getResponse.status === SorobanRpc.Api.GetTransactionStatus.NOT_FOUND) {
-      continue;
-    }
-
-    if (getResponse.status === SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
-      return getResponse;
-    }
-
-    throw new Error(`Transaction failed with status: ${getResponse.status}`);
-  }
+  // Delegate submission + polling to the centralised client so the timeout
+  // and retry strategy is applied consistently across all hooks.
+  return sorobanClient.send(signedTx);
 }
 
 interface ReadContractValueOptions<T> {
@@ -114,10 +96,9 @@ interface ReadContractValueOptions<T> {
   sourceAddress?: string;
 }
 
-async function getReadSourceAccount(
+async function resolveSourceAddress(
   preferredSourceAddress?: string,
-  signal?: AbortSignal,
-) {
+): Promise<string> {
   const sourceAddress =
     preferredSourceAddress?.trim() ||
     readPublicEnv(READONLY_SIMULATION_ACCOUNT_ENV);
@@ -128,10 +109,7 @@ async function getReadSourceAccount(
     );
   }
 
-  throwIfAborted(signal);
-  const account = await server.getAccount(sourceAddress);
-  throwIfAborted(signal);
-  return account;
+  return sourceAddress;
 }
 
 export async function readContractValue<T = unknown>(
@@ -140,34 +118,20 @@ export async function readContractValue<T = unknown>(
   args: xdr.ScVal[] = [],
   options: ReadContractValueOptions<T> = {},
 ): Promise<T> {
-  const contract = new Contract(contractId);
-  const account = await getReadSourceAccount(
-    options.sourceAddress,
+  throwIfAborted(options.signal);
+
+  const sourceAddress = await resolveSourceAddress(options.sourceAddress);
+
+  // Delegate simulation to the centralised client so all reads share the same
+  // abort-signal and retry configuration.
+  return sorobanClient.readValue<T>(
+    contractId,
+    method,
+    args,
+    sourceAddress,
     options.signal,
+    options.decoder,
   );
-
-  const tx = new TransactionBuilder(account, {
-    fee: "100",
-    networkPassphrase: NETWORK_PASSPHRASE,
-  })
-    .addOperation(contract.call(method, ...args))
-    .setTimeout(30)
-    .build();
-
-  throwIfAborted(options.signal);
-  const simulated = await server.simulateTransaction(tx);
-  throwIfAborted(options.signal);
-
-  if (SorobanRpc.Api.isSimulationSuccess(simulated)) {
-    const rawValue = simulated.result?.retval;
-    const nativeValue = rawValue ? scValToNative(rawValue) : undefined;
-
-    return options.decoder
-      ? options.decoder(nativeValue)
-      : (nativeValue as T);
-  }
-
-  throw new Error("Contract read failed");
 }
 
 function toAddressScVal(value: string): xdr.ScVal {
