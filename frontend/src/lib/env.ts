@@ -1,4 +1,4 @@
-function readPublicEnv(name: string): string | undefined {
+export function readPublicEnv(name: string): string | undefined {
   const value = process.env[name];
   if (!value) {
     return undefined;

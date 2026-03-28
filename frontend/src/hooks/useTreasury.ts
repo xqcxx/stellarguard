@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   buildDepositTx,
   buildProposeWithdrawalTx,
@@ -10,151 +10,282 @@ import {
   readContractValue,
   signAndSubmit,
 } from "@/lib/soroban";
+import {
+  decodeBigInt,
+  decodeTreasuryConfig,
+  type TreasuryConfig,
+} from "@/lib/contractData";
+import {
+  createLatestRequestGuard,
+  isAbortError,
+} from "@/lib/requestGuard";
 import { useFreighter } from "./useFreighter";
-
-export interface TreasuryConfig {
-  admin: string;
-  threshold: number;
-  signer_count: number;
-  balance: number;
-  tx_count: number;
-}
 
 const REFRESH_INTERVAL = 30_000;
 
 export function useTreasury() {
   const { address } = useFreighter();
-  const [balance, setBalance] = useState<number>(0);
+  const [balance, setBalance] = useState<bigint>(BigInt(0));
   const [config, setConfig] = useState<TreasuryConfig | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const requestGuardRef = useRef(createLatestRequestGuard());
 
-  const getBalance = useCallback(async () => {
-    try {
+  const getErrorMessage = useCallback((err: unknown, fallback: string) => {
+    if (err instanceof Error) {
+      return err.message;
+    }
+
+    return fallback;
+  }, []);
+
+  const fetchBalance = useCallback(
+    async (requestId: number, signal: AbortSignal) => {
       const result = await readContractValue(
         CONTRACT_IDS.treasury,
         "get_balance",
-        []
+        [],
+        {
+          decoder: decodeBigInt,
+          signal,
+          sourceAddress: address ?? undefined,
+        },
       );
-      const val = Number(result);
-      setBalance(val);
-      return val;
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch balance");
-      throw err;
-    }
-  }, []);
 
-  const getConfig = useCallback(async () => {
-    try {
+      if (requestGuardRef.current.isCurrent(requestId)) {
+        setBalance(result);
+      }
+
+      return result;
+    },
+    [address],
+  );
+
+  const fetchConfig = useCallback(
+    async (requestId: number, signal: AbortSignal) => {
       const result = await readContractValue(
         CONTRACT_IDS.treasury,
         "get_config",
-        []
+        [],
+        {
+          decoder: decodeTreasuryConfig,
+          signal,
+          sourceAddress: address ?? undefined,
+        },
       );
-      setConfig(result);
+
+      if (requestGuardRef.current.isCurrent(requestId)) {
+        setConfig(result);
+      }
+
       return result;
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch config");
+    },
+    [address],
+  );
+
+  const getBalance = useCallback(async () => {
+    const request = requestGuardRef.current.begin();
+
+    try {
+      const result = await fetchBalance(request.id, request.signal);
+
+      if (requestGuardRef.current.isCurrent(request.id)) {
+        setError(null);
+      }
+
+      return result;
+    } catch (err: unknown) {
+      if (isAbortError(err)) {
+        throw err;
+      }
+
+      if (requestGuardRef.current.isCurrent(request.id)) {
+        setError(getErrorMessage(err, "Failed to fetch balance"));
+      }
+
       throw err;
     }
-  }, []);
+  }, [fetchBalance, getErrorMessage]);
+
+  const getConfig = useCallback(async () => {
+    const request = requestGuardRef.current.begin();
+
+    try {
+      const result = await fetchConfig(request.id, request.signal);
+
+      if (requestGuardRef.current.isCurrent(request.id)) {
+        setError(null);
+      }
+
+      return result;
+    } catch (err: unknown) {
+      if (isAbortError(err)) {
+        throw err;
+      }
+
+      if (requestGuardRef.current.isCurrent(request.id)) {
+        setError(getErrorMessage(err, "Failed to fetch config"));
+      }
+
+      throw err;
+    }
+  }, [fetchConfig, getErrorMessage]);
 
   const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await Promise.all([getBalance(), getConfig()]);
-    } catch {
-      // Errors already handled in individual functions
-    } finally {
-      setIsLoading(false);
+    const request = requestGuardRef.current.begin();
+
+    if (requestGuardRef.current.isCurrent(request.id)) {
+      setIsLoading(true);
+      setError(null);
     }
-  }, [getBalance, getConfig]);
+
+    try {
+      await Promise.all([
+        fetchBalance(request.id, request.signal),
+        fetchConfig(request.id, request.signal),
+      ]);
+    } catch (err) {
+      if (!isAbortError(err) && requestGuardRef.current.isCurrent(request.id)) {
+        setError(getErrorMessage(err, "Failed to refresh treasury data"));
+      }
+    } finally {
+      if (requestGuardRef.current.isCurrent(request.id)) {
+        setIsLoading(false);
+      }
+    }
+  }, [fetchBalance, fetchConfig, getErrorMessage]);
 
   const deposit = async (amount: number): Promise<void> => {
     if (!address) throw new Error("Wallet not connected");
+
+    const request = requestGuardRef.current.begin();
     setError(null);
     setIsLoading(true);
+
     try {
       const tx = await buildDepositTx(CONTRACT_IDS.treasury, address, amount);
       const built = tx.build();
       await signAndSubmit(built);
-      await getBalance();
-    } catch (err: any) {
-      setError(err.message || "Deposit failed");
+      await fetchBalance(request.id, request.signal);
+    } catch (err: unknown) {
+      if (!isAbortError(err) && requestGuardRef.current.isCurrent(request.id)) {
+        setError(getErrorMessage(err, "Deposit failed"));
+      }
+
       throw err;
     } finally {
-      setIsLoading(false);
+      if (requestGuardRef.current.isCurrent(request.id)) {
+        setIsLoading(false);
+      }
     }
   };
 
   const proposeWithdrawal = async (
     to: string,
     amount: number,
-    memo: string
+    memo: string,
   ): Promise<void> => {
     if (!address) throw new Error("Wallet not connected");
+
+    const request = requestGuardRef.current.begin();
     setError(null);
     setIsLoading(true);
+
     try {
       const tx = await buildProposeWithdrawalTx(
         CONTRACT_IDS.treasury,
         address,
         to,
         amount,
-        memo
+        memo,
       );
       const built = tx.build();
       await signAndSubmit(built);
-      await getConfig();
-    } catch (err: any) {
-      setError(err.message || "Propose withdrawal failed");
+      await fetchConfig(request.id, request.signal);
+    } catch (err: unknown) {
+      if (!isAbortError(err) && requestGuardRef.current.isCurrent(request.id)) {
+        setError(getErrorMessage(err, "Propose withdrawal failed"));
+      }
+
       throw err;
     } finally {
-      setIsLoading(false);
+      if (requestGuardRef.current.isCurrent(request.id)) {
+        setIsLoading(false);
+      }
     }
   };
 
   const approve = async (txId: number): Promise<void> => {
     if (!address) throw new Error("Wallet not connected");
+
+    const request = requestGuardRef.current.begin();
     setError(null);
     setIsLoading(true);
+
     try {
       const tx = await buildApproveTx(CONTRACT_IDS.treasury, address, txId);
       const built = tx.build();
       await signAndSubmit(built);
-      await refresh();
-    } catch (err: any) {
-      setError(err.message || "Approve failed");
+      await Promise.all([
+        fetchBalance(request.id, request.signal),
+        fetchConfig(request.id, request.signal),
+      ]);
+    } catch (err: unknown) {
+      if (!isAbortError(err) && requestGuardRef.current.isCurrent(request.id)) {
+        setError(getErrorMessage(err, "Approve failed"));
+      }
+
       throw err;
     } finally {
-      setIsLoading(false);
+      if (requestGuardRef.current.isCurrent(request.id)) {
+        setIsLoading(false);
+      }
     }
   };
 
   const execute = async (txId: number): Promise<void> => {
     if (!address) throw new Error("Wallet not connected");
+
+    const request = requestGuardRef.current.begin();
     setError(null);
     setIsLoading(true);
+
     try {
       const tx = await buildExecuteTx(CONTRACT_IDS.treasury, address, txId);
       const built = tx.build();
       await signAndSubmit(built);
-      await refresh();
-    } catch (err: any) {
-      setError(err.message || "Execute failed");
+      await Promise.all([
+        fetchBalance(request.id, request.signal),
+        fetchConfig(request.id, request.signal),
+      ]);
+    } catch (err: unknown) {
+      if (!isAbortError(err) && requestGuardRef.current.isCurrent(request.id)) {
+        setError(getErrorMessage(err, "Execute failed"));
+      }
+
       throw err;
     } finally {
-      setIsLoading(false);
+      if (requestGuardRef.current.isCurrent(request.id)) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     refresh();
     const interval = setInterval(refresh, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+      requestGuardRef.current.cancel("Treasury refresh cancelled.");
+    };
   }, [refresh]);
+
+  useEffect(() => {
+    return () => {
+      requestGuardRef.current.dispose();
+    };
+  }, []);
 
   return {
     balance,

@@ -9,10 +9,13 @@ import {
   Transaction,
   nativeToScVal,
   Address,
+  scValToNative,
   xdr,
 } from "@stellar/stellar-sdk";
 import { signTransaction } from "@stellar/freighter-api";
-import { requirePublicEnv } from "./env";
+import type { Decoder, GovernanceProposalAction } from "./contractData";
+import { readPublicEnv, requirePublicEnv } from "./env";
+import { throwIfAborted } from "./requestGuard";
 import { SOROBAN_RPC_URL, NETWORK_PASSPHRASE } from "./network";
 
 // ============================================================================
@@ -26,18 +29,14 @@ export const CONTRACT_IDS = {
   accessControl: requirePublicEnv("NEXT_PUBLIC_ACL_CONTRACT_ID"),
 } as const;
 
+const READONLY_SIMULATION_ACCOUNT_ENV =
+  "NEXT_PUBLIC_SOROBAN_SIMULATION_ACCOUNT";
+
 // ============================================================================
 // Server Instance
 // ============================================================================
 
 const server = new SorobanRpc.Server(SOROBAN_RPC_URL);
-
-export type GovernanceProposalAction =
-  | "Funding"
-  | "PolicyChange"
-  | "AddMember"
-  | "RemoveMember"
-  | "General";
 
 const GOVERNANCE_ACTIONS: readonly GovernanceProposalAction[] = [
   "Funding",
@@ -109,14 +108,43 @@ export async function signAndSubmit(
   }
 }
 
-export async function readContractValue(
+interface ReadContractValueOptions<T> {
+  decoder?: Decoder<T>;
+  signal?: AbortSignal;
+  sourceAddress?: string;
+}
+
+async function getReadSourceAccount(
+  preferredSourceAddress?: string,
+  signal?: AbortSignal,
+) {
+  const sourceAddress =
+    preferredSourceAddress?.trim() ||
+    readPublicEnv(READONLY_SIMULATION_ACCOUNT_ENV);
+
+  if (!sourceAddress) {
+    throw new Error(
+      `Unable to load on-chain data without a simulation source account. Connect Freighter or set ${READONLY_SIMULATION_ACCOUNT_ENV}.`,
+    );
+  }
+
+  throwIfAborted(signal);
+  const account = await server.getAccount(sourceAddress);
+  throwIfAborted(signal);
+  return account;
+}
+
+export async function readContractValue<T = unknown>(
   contractId: string,
   method: string,
   args: xdr.ScVal[] = [],
-): Promise<any> {
+  options: ReadContractValueOptions<T> = {},
+): Promise<T> {
   const contract = new Contract(contractId);
-
-  const account = await server.getAccount(contractId);
+  const account = await getReadSourceAccount(
+    options.sourceAddress,
+    options.signal,
+  );
 
   const tx = new TransactionBuilder(account, {
     fee: "100",
@@ -126,10 +154,17 @@ export async function readContractValue(
     .setTimeout(30)
     .build();
 
+  throwIfAborted(options.signal);
   const simulated = await server.simulateTransaction(tx);
+  throwIfAborted(options.signal);
 
   if (SorobanRpc.Api.isSimulationSuccess(simulated)) {
-    return simulated.result?.retval;
+    const rawValue = simulated.result?.retval;
+    const nativeValue = rawValue ? scValToNative(rawValue) : undefined;
+
+    return options.decoder
+      ? options.decoder(nativeValue)
+      : (nativeValue as T);
   }
 
   throw new Error("Contract read failed");
@@ -226,7 +261,7 @@ export async function buildCreateProposalTx(
   proposer: string,
   title: string,
   description: string,
-  action: string,
+  action: GovernanceProposalAction,
   amount: number,
   target: string,
 ): Promise<TransactionBuilder> {
@@ -247,7 +282,7 @@ export async function buildCreateProposalXdr(
   proposer: string,
   title: string,
   description: string,
-  action: string,
+  action: GovernanceProposalAction,
   amount: number,
   target: string,
 ): Promise<string> {
