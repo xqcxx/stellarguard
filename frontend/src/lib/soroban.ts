@@ -172,7 +172,7 @@ async function buildTransactionXdr(
 export async function buildDepositTx(
   contractId: string,
   from: string,
-  amount: number,
+  amount: bigint | number,
 ): Promise<TransactionBuilder> {
   const args = [toAddressScVal(from), nativeToScVal(amount, { type: "i128" })];
 
@@ -183,7 +183,7 @@ export async function buildProposeWithdrawalTx(
   contractId: string,
   proposer: string,
   to: string,
-  amount: number,
+  amount: bigint | number,
   memo: string,
 ): Promise<TransactionBuilder> {
   const args = [

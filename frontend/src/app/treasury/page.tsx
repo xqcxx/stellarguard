@@ -86,7 +86,11 @@ export default function TreasuryPage() {
     setConfirmExecuteTxId(txId);
   };
 
-  const handleProposeWithdrawal = async (to: string, amount: number, memo: string) => {
+  const handleProposeWithdrawal = async (
+    to: string,
+    amount: bigint,
+    memo: string,
+  ) => {
     await proposeWithdrawal(to, amount, memo);
   };
 
@@ -269,28 +273,36 @@ export default function TreasuryPage() {
                 filteredTransactions.some((item) => item.id === transaction.id),
               )
               .map((transaction) => (
-              <div
-                key={transaction.id}
-                className="cursor-pointer"
-                onClick={() => setSelectedTx(transaction)}
-              >
-                <TreasuryCard
-                  txId={transaction.id}
-                  to={transaction.to}
-                  amount={transaction.amount}
-                  memo={transaction.memo}
-                  approvals={transaction.approvals}
-                  threshold={threshold || 1}
-                  executed={transaction.executed}
-                  isPendingApproval={pendingActions.get(transaction.id) === "approve"}
-                  isPendingExecution={pendingActions.get(transaction.id) === "execute"}
-                  onApprove={isNetworkMismatch || !address ? undefined : handleApprove}
-                  onExecute={isNetworkMismatch || !address ? undefined : handleExecute}
-                  currentAddress={address}
-                  canSign={!isNetworkMismatch && !!address}
-                />
-              </div>
-            ))
+                <div
+                  key={transaction.id}
+                  className="cursor-pointer"
+                  onClick={() => setSelectedTx(transaction)}
+                >
+                  <TreasuryCard
+                    txId={transaction.id}
+                    to={transaction.to}
+                    amount={transaction.amount}
+                    memo={transaction.memo}
+                    approvals={transaction.approvals}
+                    threshold={threshold || 1}
+                    executed={transaction.executed}
+                    isPendingApproval={
+                      pendingActions.get(transaction.id) === "approve"
+                    }
+                    isPendingExecution={
+                      pendingActions.get(transaction.id) === "execute"
+                    }
+                    onApprove={
+                      isNetworkMismatch || !address ? undefined : handleApprove
+                    }
+                    onExecute={
+                      isNetworkMismatch || !address ? undefined : handleExecute
+                    }
+                    currentAddress={address}
+                    canSign={!isNetworkMismatch && !!address}
+                  />
+                </div>
+              ))
           )}
         </div>
       </div>

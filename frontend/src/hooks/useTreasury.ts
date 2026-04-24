@@ -189,7 +189,7 @@ export function useTreasury() {
   }, [address, isNetworkMismatch]);
 
   const deposit = useCallback(
-    async (amount: number): Promise<void> => {
+    async (amount: bigint | number): Promise<void> => {
       assertWalletReady();
       const walletAddress = address as string;
       setError(null);
@@ -212,7 +212,7 @@ export function useTreasury() {
   );
 
   const proposeWithdrawal = useCallback(
-    async (to: string, amount: number, memo: string): Promise<void> => {
+    async (to: string, amount: bigint | number, memo: string): Promise<void> => {
       assertWalletReady();
       const walletAddress = address as string;
       setError(null);

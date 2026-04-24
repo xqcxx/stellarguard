@@ -8,7 +8,7 @@ import { parseXlmToStroops } from '@/lib/formatters';
 interface WithdrawalModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPropose: (to: string, amount: number, memo: string) => Promise<void>;
+  onPropose: (to: string, amount: bigint, memo: string) => Promise<void>;
   balance: bigint;
   isProposing: boolean;
 }

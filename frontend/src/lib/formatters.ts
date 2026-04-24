@@ -87,7 +87,7 @@ export function formatAddress(
   return `${normalized.slice(0, startChars)}...${normalized.slice(-endChars)}`;
 }
 
-export function parseXlmToStroops(value: string): number {
+export function parseXlmToStroops(value: string): bigint {
   const normalized = value.trim();
   if (!/^-?\d+(?:\.\d{1,7})?$/.test(normalized)) {
     throw new Error("Invalid XLM amount format. Use up to 7 decimal places.");
@@ -99,12 +99,7 @@ export function parseXlmToStroops(value: string): number {
   const fraction = fractionPart.padEnd(7, "0").slice(0, 7);
   const stroops = whole * STROOPS_PER_XLM + BigInt(fraction);
 
-  const result = stroops * sign;
-  if (result < Number.MIN_SAFE_INTEGER || result > Number.MAX_SAFE_INTEGER) {
-    throw new Error("XLM amount is out of supported range.");
-  }
-
-  return Number(result);
+  return stroops * sign;
 }
 
 export function formatAbsoluteDate(
