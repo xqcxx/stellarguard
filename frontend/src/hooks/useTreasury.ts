@@ -30,7 +30,7 @@ type TxAction = "approve" | "execute";
 
 export function useTreasury() {
   const { address, network } = useFreighter();
-  const [balance, setBalance] = useState<bigint>(0n);
+  const [balance, setBalance] = useState<bigint>(BigInt(0));
   const [config, setConfig] = useState<TreasuryConfig | null>(null);
   const [transactions, setTransactions] = useState<TreasuryTransaction[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -38,6 +38,7 @@ export function useTreasury() {
   const [txActions, setTxActions] = useState<ReadonlyMap<number, TxAction>>(
     new Map(),
   );
+  const [isProposing, setIsProposing] = useState(false);
 
   const requestGuardRef = useRef(createLatestRequestGuard());
 
@@ -215,6 +216,7 @@ export function useTreasury() {
       assertWalletReady();
       const walletAddress = address as string;
       setError(null);
+      setIsProposing(true);
 
       try {
         const txBuilder = await buildProposeWithdrawalTx(
@@ -230,6 +232,8 @@ export function useTreasury() {
         const appError = classifyError(err);
         setError(appError);
         throw appError;
+      } finally {
+        setIsProposing(false);
       }
     },
     [address, assertWalletReady, refresh],
@@ -361,6 +365,7 @@ export function useTreasury() {
     error,
     isNetworkMismatch,
     pendingActions: txActions,
+    isProposing,
     deposit,
     proposeWithdrawal,
     approve,

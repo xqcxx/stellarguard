@@ -9,6 +9,7 @@ import { TreasuryCard } from "@/components/TreasuryCard";
 import { WalletConnect } from "@/components/WalletConnect";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { CopyButton } from "@/components/CopyButton";
+import { WithdrawalModal } from "@/components/WithdrawalModal";
 import type { TreasuryTransaction } from "@/lib/contractData";
 
 export default function TreasuryPage() {
@@ -21,6 +22,8 @@ export default function TreasuryPage() {
     error,
     isNetworkMismatch,
     pendingActions,
+    isProposing,
+    proposeWithdrawal,
     approve,
     execute,
     refresh,
@@ -29,6 +32,7 @@ export default function TreasuryPage() {
 
   const [selectedTx, setSelectedTx] = useState<TreasuryTransaction | null>(null);
   const [confirmExecuteTxId, setConfirmExecuteTxId] = useState<number | null>(null);
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "executed">(
     "all",
@@ -81,6 +85,10 @@ export default function TreasuryPage() {
     setConfirmExecuteTxId(txId);
   };
 
+  const handleProposeWithdrawal = async (to: string, amount: number, memo: string) => {
+    await proposeWithdrawal(to, amount, memo);
+  };
+
   const runExecute = async () => {
     if (confirmExecuteTxId === null) {
       return;
@@ -128,6 +136,13 @@ export default function TreasuryPage() {
           </p>
         </div>
         <div className="flex gap-2 items-center">
+          <button
+            className="btn-primary text-sm"
+            onClick={() => setShowWithdrawalModal(true)}
+            disabled={isNetworkMismatch || !address || isProposing}
+          >
+            {isProposing ? "Proposing..." : "+ Propose Withdrawal"}
+          </button>
           <button
             className="btn-secondary text-sm"
             onClick={exportHistoryCsv}
@@ -215,7 +230,7 @@ export default function TreasuryPage() {
           <div>
             <p className="text-sm text-gray-400">Treasury Balance</p>
             <p className="text-3xl font-bold text-white mt-1">
-              {isLoading && balance === 0n ? "Loading..." : `${formatXlm(balance)} XLM`}
+              {isLoading && balance === BigInt(0) ? "Loading..." : `${formatXlm(balance)} XLM`}
             </p>
           </div>
           <div>
@@ -419,6 +434,14 @@ export default function TreasuryPage() {
           </div>
         </>
       )}
+
+      <WithdrawalModal
+        isOpen={showWithdrawalModal}
+        onClose={() => setShowWithdrawalModal(false)}
+        onPropose={handleProposeWithdrawal}
+        balance={balance}
+        isProposing={isProposing}
+      />
 
       <ConfirmationDialog
         isOpen={confirmExecuteTxId !== null}

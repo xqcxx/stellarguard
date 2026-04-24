@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { toast } from "react-hot-toast";
 import { VoteButton } from "@/components/VoteButton";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useGovernance } from "@/hooks/useGovernance";
+import type { GovernanceProposal } from "@/lib/contractData";
 
 export default function ProposalDetailPage({
   params,
@@ -37,7 +40,7 @@ export default function ProposalDetailPage({
 
   useEffect(() => {
     if (!proposal) return;
-    const endMs = proposal.deadline * 1000;
+    const endMs = proposal.endsAt * 1000;
     const diff = endMs - nowMs;
     if (diff <= 0) {
       setCountdown("Voting window closed");
@@ -57,7 +60,7 @@ export default function ProposalDetailPage({
   const againstPercent = totalVotes > 0 ? ((proposal?.votesAgainst ?? 0) / totalVotes) * 100 : 0;
   const canFinalize = useMemo(() => {
     if (!proposal) return false;
-    return proposal.status === "Active" && proposal.deadline * 1000 <= nowMs;
+    return proposal.status === "Active" && proposal.endsAt * 1000 <= nowMs;
   }, [proposal, nowMs]);
 
   const handleCopyLink = async () => {
@@ -100,13 +103,13 @@ export default function ProposalDetailPage({
               <h1 className="text-2xl font-bold text-white">
                 {proposal?.title ?? `Proposal #${params.id}`}
               </h1>
-              <StatusBadge status="Active" size="md" />
+              <StatusBadge status={proposal?.status ?? "Active"} size="md" />
             </div>
             <p className="text-gray-400 mt-2">{proposal?.description ?? "Loading proposal details..."}</p>
             {proposal ? (
               <p className="text-xs text-gray-500 mt-2">
                 Ends at{" "}
-                {new Date(proposal.deadline * 1000).toLocaleString(undefined, {
+                {new Date(proposal.endsAt * 1000).toLocaleString(undefined, {
                   timeZoneName: "short",
                 })}{" "}
                 ({countdown})
@@ -172,8 +175,8 @@ export default function ProposalDetailPage({
       <div className="fixed bottom-0 inset-x-0 p-4 bg-gray-900 border-t border-stellar-border z-50 md:relative md:p-0 md:bg-transparent md:border-t-0 md:z-auto card md:card">
         <h2 className="hidden md:block text-lg font-semibold text-white mb-4">Cast Vote</h2>
         <div className="flex space-x-4">
-          <VoteButton proposalId={id} voteFor={true} votingClosed={proposal ? proposal.deadline * 1000 <= nowMs : false} />
-          <VoteButton proposalId={id} voteFor={false} votingClosed={proposal ? proposal.deadline * 1000 <= nowMs : false} />
+          <VoteButton proposalId={id} voteFor={true} votingClosed={proposal ? proposal.endsAt * 1000 <= nowMs : false} />
+          <VoteButton proposalId={id} voteFor={false} votingClosed={proposal ? proposal.endsAt * 1000 <= nowMs : false} />
         </div>
       </div>
     </div>

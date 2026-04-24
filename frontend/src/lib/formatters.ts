@@ -87,6 +87,26 @@ export function formatAddress(
   return `${normalized.slice(0, startChars)}...${normalized.slice(-endChars)}`;
 }
 
+export function parseXlmToStroops(value: string): number {
+  const normalized = value.trim();
+  if (!/^-?\d+(?:\.\d{1,7})?$/.test(normalized)) {
+    throw new Error("Invalid XLM amount format. Use up to 7 decimal places.");
+  }
+
+  const [wholePart = "0", fractionPart = ""] = normalized.split(".");
+  const sign = wholePart.startsWith("-") ? BigInt(-1) : BigInt(1);
+  const whole = BigInt(wholePart.replace("-", ""));
+  const fraction = fractionPart.padEnd(7, "0").slice(0, 7);
+  const stroops = whole * STROOPS_PER_XLM + BigInt(fraction);
+
+  const result = stroops * sign;
+  if (result < Number.MIN_SAFE_INTEGER || result > Number.MAX_SAFE_INTEGER) {
+    throw new Error("XLM amount is out of supported range.");
+  }
+
+  return Number(result);
+}
+
 export function formatAbsoluteDate(
   value: Date | string | number,
   locale = "en-US",
