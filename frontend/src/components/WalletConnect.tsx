@@ -4,20 +4,19 @@ import React from "react";
 import { useFreighter } from "@/hooks/useFreighter";
 import { formatAddress } from "@/lib/formatters";
 import { CopyButton } from "@/components/CopyButton";
+import { SecureExternalLink } from "@/components/SecureExternalLink";
 
 export const WalletConnect = () => {
   const { address, isConnecting, connect, disconnect, isFreighterInstalled, error } = useFreighter();
 
   if (!isFreighterInstalled) {
     return (
-      <a 
-        href="https://www.freighter.app/" 
-        target="_blank" 
-        rel="noopener noreferrer"
+      <SecureExternalLink
+        href="https://www.freighter.app/"
         className="btn-primary text-sm"
       >
         Install Freighter
-      </a>
+      </SecureExternalLink>
     );
   }
 

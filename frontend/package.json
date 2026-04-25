@@ -10,7 +10,8 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "check:deps": "node scripts/check-deps.mjs"
+    "check:deps": "node scripts/check-deps.mjs",
+    "check:external-links": "node scripts/audit-external-links.mjs"
   },
   "dependencies": {
     "@stellar/freighter-api": "^2.0.0",
