@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ProposalCard } from "@/components/ProposalCard";
-import { CreateProposalModal } from "@/components/CreateProposalModal";
+import dynamic from "next/dynamic";
 import { useGovernance } from "@/hooks/useGovernance";
 import type {
   GovernanceProposal,
@@ -29,6 +28,15 @@ const ACTION_FILTERS: Array<"All" | GovernanceProposalAction> = [
 ];
 
 type SortKey = "newest" | "ending-soon" | "most-votes";
+
+const ProposalCard = dynamic(() =>
+  import("@/components/ProposalCard").then((module) => module.ProposalCard),
+);
+const CreateProposalModal = dynamic(() =>
+  import("@/components/CreateProposalModal").then(
+    (module) => module.CreateProposalModal,
+  ),
+);
 
 const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
   { value: "newest", label: "Newest" },

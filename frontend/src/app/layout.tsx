@@ -8,6 +8,7 @@ import { FreighterProvider } from "@/context/FreighterProvider";
 import { WalletConnect } from "@/components/WalletConnect";
 import { DiagnosticsPanel } from "@/components/DiagnosticsPanel";
 import { ToastContainer } from "@/components/Toast";
+import { NetworkMismatchBanner } from "@/components/NetworkMismatchBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -93,6 +94,7 @@ export default function RootLayout({
               </div>
             </div>
           </nav>
+          <NetworkMismatchBanner />
           
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             {children}

@@ -1,16 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useTreasury } from "@/hooks/useTreasury";
 import { useFreighter } from "@/hooks/useFreighter";
 import { formatAbsoluteDate, formatAddress, formatXlm } from "@/lib/formatters";
 import { ERROR_CODE_LABELS } from "@/lib/errors";
-import { TreasuryCard } from "@/components/TreasuryCard";
 import { WalletConnect } from "@/components/WalletConnect";
-import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { CopyButton } from "@/components/CopyButton";
-import { WithdrawalModal } from "@/components/WithdrawalModal";
 import type { TreasuryTransaction } from "@/lib/contractData";
+
+const TreasuryCard = dynamic(() =>
+  import("@/components/TreasuryCard").then((module) => module.TreasuryCard),
+);
+const WithdrawalModal = dynamic(() =>
+  import("@/components/WithdrawalModal").then((module) => module.WithdrawalModal),
+);
+const ConfirmationDialog = dynamic(() =>
+  import("@/components/ConfirmationDialog").then(
+    (module) => module.ConfirmationDialog,
+  ),
+);
 
 export default function TreasuryPage() {
   const { address } = useFreighter();
@@ -37,6 +47,8 @@ export default function TreasuryPage() {
   const [statusFilter, setStatusFilter] = useState<"pending" | "ready" | "executed">(
     "pending",
   );
+  const threshold = config?.threshold ?? 0;
+  const signerCount = config?.signerCount ?? 0;
 
   const pendingTxs = useMemo(
     () => transactions.filter((transaction) => !transaction.executed),
@@ -74,9 +86,6 @@ export default function TreasuryPage() {
     () => filteredTransactions.filter((transaction) => transaction.executed),
     [filteredTransactions],
   );
-
-  const threshold = config?.threshold ?? 0;
-  const signerCount = config?.signerCount ?? 0;
 
   const handleApprove = async (txId: number) => {
     await approve(txId);

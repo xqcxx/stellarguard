@@ -80,7 +80,7 @@ export async function fundAccount(address: string): Promise<boolean> {
   }
 }
 
-function normalizeWalletNetwork(
+export function normalizeWalletNetwork(
   value: string,
 ): "testnet" | "futurenet" | "mainnet" | null {
   const normalized = value.trim().toLowerCase();
@@ -108,6 +108,19 @@ function normalizeWalletNetwork(
   }
 
   return null;
+}
+
+export function getWalletNetworkLabel(walletNetwork: string | null): string {
+  if (!walletNetwork) {
+    return "unknown";
+  }
+
+  const normalized = normalizeWalletNetwork(walletNetwork);
+  if (normalized) {
+    return NETWORKS[normalized].name;
+  }
+
+  return walletNetwork;
 }
 
 export function isWalletNetworkMismatch(walletNetwork: string | null): boolean {
