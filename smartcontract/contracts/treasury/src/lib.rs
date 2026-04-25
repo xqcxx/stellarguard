@@ -3,7 +3,7 @@
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, log, symbol_short, token, Address, Env,
-    Symbol, Vec,
+    String, Vec,
 };
 
 // ============================================================================
@@ -78,7 +78,7 @@ pub struct Transaction {
     /// Amount to withdraw (in stroops).
     pub amount: i128,
     /// Text description / memo for the transaction.
-    pub memo: Symbol,
+    pub memo: String,
     /// Addresses that have approved this transaction.
     pub approvals: Vec<Address>,
     /// Whether the transaction has been executed.
@@ -291,7 +291,7 @@ impl TreasuryContract {
     /// * `proposer` - The signer proposing the withdrawal.
     /// * `to` - The destination address.
     /// * `amount` - The amount to withdraw.
-    /// * `memo` - A short description of the withdrawal.
+    /// * `memo` - A description of the withdrawal.
     ///
     /// # Returns
     /// The ID of the created transaction proposal.
@@ -306,7 +306,7 @@ impl TreasuryContract {
         proposer: Address,
         to: Address,
         amount: i128,
-        memo: Symbol,
+        memo: String,
     ) -> Result<u64, Error> {
         Self::require_initialized(&env)?;
         Self::require_signer(&env, &proposer)?;
@@ -861,7 +861,7 @@ mod test {
         // Propose withdrawal
         let recipient = Address::generate(&env);
         let tx_id =
-            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &symbol_short!("rent"));
+            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &String::from_str(&env, "rent"));
         assert_eq!(tx_id, 1);
 
         // Second signer approves
@@ -893,7 +893,7 @@ mod test {
 
         let recipient = Address::generate(&env);
         let tx_id =
-            client.propose_withdrawal(&signer1, &recipient, &3_000_000, &symbol_short!("ops"));
+            client.propose_withdrawal(&signer1, &recipient, &3_000_000, &String::from_str(&env, "ops"));
 
         let approvals = client.approve(&signer2, &tx_id);
         assert_eq!(approvals, 2);
@@ -1006,13 +1006,13 @@ mod test {
 
         let recipient = Address::generate(&env);
         let tx_id =
-            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &symbol_short!("rent"));
+            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &String::from_str(&env, "rent"));
 
         let tx = client.get_transaction(&tx_id);
         assert_eq!(tx.id, tx_id);
         assert_eq!(tx.to, recipient);
         assert_eq!(tx.amount, 1_000_000);
-        assert_eq!(tx.memo, symbol_short!("rent"));
+        assert_eq!(tx.memo, String::from_str(&env, "rent"));
         assert_eq!(tx.proposer, signer1);
         assert_eq!(tx.approvals.len(), 1);
         assert_eq!(tx.approvals.get(0).unwrap(), signer1);
@@ -1035,7 +1035,7 @@ mod test {
             &non_signer,
             &recipient,
             &1_000_000,
-            &symbol_short!("rent"),
+            &String::from_str(&env, "rent"),
         );
         assert_eq!(result, Err(Ok(Error::NotASigner)));
     }
@@ -1051,7 +1051,7 @@ mod test {
         let recipient = Address::generate(&env);
 
         let result =
-            client.try_propose_withdrawal(&signer, &recipient, &1_000_000, &symbol_short!("rent"));
+            client.try_propose_withdrawal(&signer, &recipient, &1_000_000, &String::from_str(&env, "rent"));
         assert_eq!(result, Err(Ok(Error::InsufficientFunds)));
     }
 
@@ -1128,7 +1128,7 @@ mod test {
 
         let recipient = Address::generate(&env);
         let tx_id =
-            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &symbol_short!("rent"));
+            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &String::from_str(&env, "rent"));
 
         let events = env.events().all();
         let event = events.get(events.len() - 1).unwrap();
@@ -1162,7 +1162,7 @@ mod test {
         client.deposit(&signer1, &5_000_000);
         let recipient = Address::generate(&env);
         let tx_id =
-            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &symbol_short!("rent"));
+            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &String::from_str(&env, "rent"));
 
         let approval_count = client.approve(&signer2, &tx_id);
 
@@ -1197,7 +1197,7 @@ mod test {
         client.deposit(&signer1, &5_000_000);
         let recipient = Address::generate(&env);
         let tx_id =
-            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &symbol_short!("rent"));
+            client.propose_withdrawal(&signer1, &recipient, &1_000_000, &String::from_str(&env, "rent"));
         client.approve(&signer2, &tx_id);
         client.execute(&signer1, &tx_id);
 

@@ -86,7 +86,7 @@
                   }
                 },
                 {
-                  "symbol": "ops"
+                  "string": "ops"
                 }
               ]
             }
@@ -244,7 +244,7 @@
                         "symbol": "memo"
                       },
                       "val": {
-                        "symbol": "ops"
+                        "string": "ops"
                       }
                     },
                     {
@@ -877,7 +877,7 @@
                   }
                 },
                 {
-                  "symbol": "ops"
+                  "string": "ops"
                 }
               ]
             }
@@ -1427,7 +1427,7 @@
                     "symbol": "memo"
                   },
                   "val": {
-                    "symbol": "ops"
+                    "string": "ops"
                   }
                 },
                 {

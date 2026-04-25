@@ -83,7 +83,7 @@
                   }
                 },
                 {
-                  "symbol": "rent"
+                  "string": "rent"
                 }
               ]
             }
@@ -217,7 +217,7 @@
                         "symbol": "memo"
                       },
                       "val": {
-                        "symbol": "rent"
+                        "string": "rent"
                       }
                     },
                     {
@@ -811,7 +811,7 @@
                   }
                 },
                 {
-                  "symbol": "rent"
+                  "string": "rent"
                 }
               ]
             }

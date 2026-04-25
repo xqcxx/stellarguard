@@ -564,7 +564,7 @@
                   }
                 },
                 {
-                  "symbol": "rent"
+                  "string": "rent"
                 }
               ]
             }
@@ -663,7 +663,7 @@
                       }
                     },
                     {
-                      "symbol": "rent"
+                      "string": "rent"
                     }
                   ]
                 }

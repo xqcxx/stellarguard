@@ -660,6 +660,11 @@ impl GovernanceContract {
 
         admin.require_auth();
 
+        // Validate quorum range (1-100)
+        if new_quorum < 1 || new_quorum > 100 {
+            return Err(Error::InvalidProposal);
+        }
+
         env.storage()
             .instance()
             .set(&DataKey::QuorumPercent, &new_quorum);
@@ -1477,5 +1482,37 @@ mod test {
 
         client.set_quorum(&admin, &75);
         assert_eq!(client.get_config().quorum_percent, 75);
+    }
+
+    #[test]
+    fn test_set_quorum_rejects_zero() {
+        let (env, admin, client) = setup_contract();
+        client.initialize(&admin, &Vec::new(&env), &50, &10);
+
+        let result = client.try_set_quorum(&admin, &0);
+        assert_eq!(result, Err(Ok(Error::InvalidProposal)));
+    }
+
+    #[test]
+    fn test_set_quorum_rejects_above_100() {
+        let (env, admin, client) = setup_contract();
+        client.initialize(&admin, &Vec::new(&env), &50, &10);
+
+        let result = client.try_set_quorum(&admin, &101);
+        assert_eq!(result, Err(Ok(Error::InvalidProposal)));
+    }
+
+    #[test]
+    fn test_set_quorum_accepts_boundary_values() {
+        let (env, admin, client) = setup_contract();
+        client.initialize(&admin, &Vec::new(&env), &50, &10);
+
+        // Test minimum valid value
+        client.set_quorum(&admin, &1);
+        assert_eq!(client.get_config().quorum_percent, 1);
+
+        // Test maximum valid value
+        client.set_quorum(&admin, &100);
+        assert_eq!(client.get_config().quorum_percent, 100);
     }
 }
