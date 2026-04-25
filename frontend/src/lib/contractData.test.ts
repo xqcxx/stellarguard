@@ -46,6 +46,33 @@ describe("contract decoders", () => {
       approvals: ["GS1", "GS2"],
       executed: false,
       createdAt: 1700,
+      executedAt: null,
+      proposer: "GPROP",
+    });
+  });
+
+  it("decodes treasury transactions with executedAt timestamp", () => {
+    expect(
+      decodeTreasuryTransaction({
+        id: "8",
+        to: "GDEST",
+        amount: BigInt(2000000),
+        memo: "payout",
+        approvals: ["GS1"],
+        executed: true,
+        created_at: 1700,
+        executed_at: 1800,
+        proposer: "GPROP",
+      }),
+    ).toEqual({
+      id: 8,
+      to: "GDEST",
+      amount: BigInt(2000000),
+      memo: "payout",
+      approvals: ["GS1"],
+      executed: true,
+      createdAt: 1700,
+      executedAt: 1800,
       proposer: "GPROP",
     });
   });
@@ -154,6 +181,7 @@ describe("treasury integration tests with mocked Soroban responses", () => {
       approvals: [],
       executed: false,
       createdAt: 1700000000,
+      executedAt: null,
       proposer: "GPROP1XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
     });
   });

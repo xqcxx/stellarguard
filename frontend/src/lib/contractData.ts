@@ -48,6 +48,8 @@ export interface TreasuryTransaction {
   approvals: string[];
   executed: boolean;
   createdAt: number;
+  /** Unix timestamp (seconds) when the transaction was executed on-chain. Null if not yet executed. */
+  executedAt: number | null;
   proposer: string;
 }
 
@@ -249,6 +251,15 @@ export const decodeTreasuryTransaction: Decoder<TreasuryTransaction> = (
 ) => {
   const record = asRecord(value, "treasury transaction");
 
+  // executed_at is optional — contracts may not emit it for pending txs
+  let executedAt: number | null = null;
+  if ("executed_at" in record && record["executed_at"] != null) {
+    executedAt = toSafeNumber(
+      record["executed_at"],
+      "treasury transaction executed_at",
+    );
+  }
+
   return {
     id: toSafeNumber(readField(record, "id"), "treasury transaction id"),
     to: toStringValue(readField(record, "to"), "treasury transaction to"),
@@ -269,6 +280,7 @@ export const decodeTreasuryTransaction: Decoder<TreasuryTransaction> = (
       readField(record, "created_at"),
       "treasury transaction created_at",
     ),
+    executedAt,
     proposer: toStringValue(
       readField(record, "proposer"),
       "treasury transaction proposer",
@@ -280,10 +292,7 @@ export const decodeGovernanceConfig: Decoder<GovernanceConfig> = (value) => {
   const record = asRecord(value, "governance config");
 
   return {
-    admin: toStringValue(
-      readField(record, "admin"),
-      "governance config admin",
-    ),
+    admin: toStringValue(readField(record, "admin"), "governance config admin"),
     memberCount: toSafeNumber(
       readField(record, "member_count"),
       "governance config member_count",
@@ -310,7 +319,10 @@ export const decodeGovernanceProposal: Decoder<GovernanceProposal> = (
 
   return {
     id: toSafeNumber(readField(record, "id"), "governance proposal id"),
-    title: toStringValue(readField(record, "title"), "governance proposal title"),
+    title: toStringValue(
+      readField(record, "title"),
+      "governance proposal title",
+    ),
     description: toStringValue(
       readField(record, "description"),
       "governance proposal description",

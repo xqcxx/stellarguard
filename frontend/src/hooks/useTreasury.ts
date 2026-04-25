@@ -26,6 +26,7 @@ import {
   MOCK_TREASURY_TRANSACTIONS,
 } from "@/lib/treasuryMocks";
 import { useFreighter } from "./useFreighter";
+import { usePageVisibility } from "./usePageVisibility";
 
 const REFRESH_INTERVAL = 30_000;
 const MAX_VISIBLE_TRANSACTIONS = 20;
@@ -35,6 +36,7 @@ type TxAction = "approve" | "execute";
 
 export function useTreasury() {
   const { address, network } = useFreighter();
+  const isPageVisible = usePageVisibility();
   const [balance, setBalance] = useState<bigint>(BigInt(0));
   const [config, setConfig] = useState<TreasuryConfig | null>(null);
   const [transactions, setTransactions] = useState<TreasuryTransaction[]>([]);
@@ -182,7 +184,11 @@ export function useTreasury() {
         fetchConfig(request.id, request.signal),
       ]);
 
-      await fetchTransactions(request.id, request.signal, currentConfig.txCount);
+      await fetchTransactions(
+        request.id,
+        request.signal,
+        currentConfig.txCount,
+      );
 
       if (requestGuardRef.current.isCurrent(request.id)) {
         setBalance(currentConfig.balance ?? currentBalance);
@@ -232,9 +238,14 @@ export function useTreasury() {
   );
 
   const proposeWithdrawal = useCallback(
-    async (to: string, amount: bigint | number, memo: string): Promise<void> => {
+    async (
+      to: string,
+      amount: bigint | number,
+      memo: string,
+    ): Promise<void> => {
       if (IS_TREASURY_MOCK_MODE) {
-        const amountBigInt = typeof amount === "bigint" ? amount : BigInt(amount);
+        const amountBigInt =
+          typeof amount === "bigint" ? amount : BigInt(amount);
         const nextId = txCounterRef.current + 1;
         txCounterRef.current = nextId;
         setTransactions((current) => [
@@ -246,6 +257,7 @@ export function useTreasury() {
             approvals: address ? [address] : [],
             executed: false,
             createdAt: Math.floor(Date.now() / 1000),
+            executedAt: null,
             proposer: address ?? "",
           },
           ...current,
@@ -332,7 +344,9 @@ export function useTreasury() {
         setTxAction(txId, null);
         throw new Error("You already approved this transaction");
       }
-      if (tx.approvals.length >= (config?.threshold ?? Number.MAX_SAFE_INTEGER)) {
+      if (
+        tx.approvals.length >= (config?.threshold ?? Number.MAX_SAFE_INTEGER)
+      ) {
         setTxAction(txId, null);
         throw new Error("Approval threshold already met");
       }
@@ -371,7 +385,14 @@ export function useTreasury() {
         setTxAction(txId, null);
       }
     },
-    [address, assertWalletReady, config?.threshold, refresh, setTxAction, transactions],
+    [
+      address,
+      assertWalletReady,
+      config?.threshold,
+      refresh,
+      setTxAction,
+      transactions,
+    ],
   );
 
   const execute = useCallback(
@@ -423,14 +444,17 @@ export function useTreasury() {
     refresh();
 
     const interval = setInterval(() => {
-      refresh();
+      // Pause polling while the tab is hidden to avoid unnecessary RPC calls.
+      if (isPageVisible) {
+        refresh();
+      }
     }, REFRESH_INTERVAL);
 
     return () => {
       clearInterval(interval);
       requestGuard.cancel("Treasury refresh cancelled.");
     };
-  }, [refresh]);
+  }, [refresh, isPageVisible]);
 
   useEffect(() => {
     const requestGuard = requestGuardRef.current;

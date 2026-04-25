@@ -19,12 +19,10 @@ import {
   type GovernanceProposal,
   type GovernanceProposalAction,
 } from "@/lib/contractData";
-import {
-  createLatestRequestGuard,
-  isAbortError,
-} from "@/lib/requestGuard";
+import { createLatestRequestGuard, isAbortError } from "@/lib/requestGuard";
 import { classifyError, type AppError } from "@/lib/errors";
 import { useFreighter } from "./useFreighter";
+import { usePageVisibility } from "./usePageVisibility";
 
 const REFRESH_INTERVAL = 30_000;
 
@@ -39,15 +37,16 @@ export interface PendingVote {
 
 export function useGovernance() {
   const { address } = useFreighter();
+  const isPageVisible = usePageVisibility();
   const [config, setConfig] = useState<GovernanceConfig | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<AppError | null>(null);
 
   // Maps proposalId → voteFor for votes that are in-flight.
   // UI reads this to reflect intent before chain confirmation.
-  const [pendingVotes, setPendingVotes] = useState<ReadonlyMap<number, boolean>>(
-    new Map(),
-  );
+  const [pendingVotes, setPendingVotes] = useState<
+    ReadonlyMap<number, boolean>
+  >(new Map());
 
   const requestGuardRef = useRef(createLatestRequestGuard());
 
@@ -187,8 +186,9 @@ export function useGovernance() {
 
     // Optimistically record the pending vote so the UI reflects intent
     // instantly — the counter updates before the chain confirms.
-    setPendingVotes((prev: ReadonlyMap<number, boolean>) =>
-      new Map(Array.from(prev).concat([[proposalId, voteFor]])),
+    setPendingVotes(
+      (prev: ReadonlyMap<number, boolean>) =>
+        new Map(Array.from(prev).concat([[proposalId, voteFor]])),
     );
 
     const request = requestGuardRef.current.begin();
@@ -340,13 +340,18 @@ export function useGovernance() {
 
   useEffect(() => {
     refresh();
-    const interval = setInterval(refresh, REFRESH_INTERVAL);
+    const interval = setInterval(() => {
+      // Pause polling while the tab is hidden to avoid unnecessary RPC calls.
+      if (isPageVisible) {
+        refresh();
+      }
+    }, REFRESH_INTERVAL);
 
     return () => {
       clearInterval(interval);
       requestGuardRef.current.cancel("Governance refresh cancelled.");
     };
-  }, [refresh]);
+  }, [refresh, isPageVisible]);
 
   useEffect(() => {
     return () => {

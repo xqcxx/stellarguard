@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
     "check:deps": "node scripts/check-deps.mjs"
   },
   "dependencies": {

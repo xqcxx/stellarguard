@@ -14,7 +14,9 @@ const TreasuryCard = dynamic(() =>
   import("@/components/TreasuryCard").then((module) => module.TreasuryCard),
 );
 const WithdrawalModal = dynamic(() =>
-  import("@/components/WithdrawalModal").then((module) => module.WithdrawalModal),
+  import("@/components/WithdrawalModal").then(
+    (module) => module.WithdrawalModal,
+  ),
 );
 const ConfirmationDialog = dynamic(() =>
   import("@/components/ConfirmationDialog").then(
@@ -40,13 +42,17 @@ export default function TreasuryPage() {
     clearError,
   } = useTreasury();
 
-  const [selectedTx, setSelectedTx] = useState<TreasuryTransaction | null>(null);
-  const [confirmExecuteTxId, setConfirmExecuteTxId] = useState<number | null>(null);
+  const [selectedTx, setSelectedTx] = useState<TreasuryTransaction | null>(
+    null,
+  );
+  const [confirmExecuteTxId, setConfirmExecuteTxId] = useState<number | null>(
+    null,
+  );
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"pending" | "ready" | "executed">(
-    "pending",
-  );
+  const [statusFilter, setStatusFilter] = useState<
+    "pending" | "ready" | "executed"
+  >("pending");
   const threshold = config?.threshold ?? 0;
   const signerCount = config?.signerCount ?? 0;
 
@@ -62,9 +68,11 @@ export default function TreasuryPage() {
       if (statusFilter === "executed") {
         statusMatches = transaction.executed;
       } else if (statusFilter === "ready") {
-        statusMatches = !transaction.executed && transaction.approvals.length >= threshold;
+        statusMatches =
+          !transaction.executed && transaction.approvals.length >= threshold;
       } else if (statusFilter === "pending") {
-        statusMatches = !transaction.executed && transaction.approvals.length < threshold;
+        statusMatches =
+          !transaction.executed && transaction.approvals.length < threshold;
       }
       if (!statusMatches) {
         return false;
@@ -114,7 +122,14 @@ export default function TreasuryPage() {
 
   const exportHistoryCsv = () => {
     const rows = [
-      ["id", "destination", "amount_xlm", "status", "approvals", "created_at_unix"],
+      [
+        "id",
+        "destination",
+        "amount_xlm",
+        "status",
+        "approvals",
+        "created_at_unix",
+      ],
       ...filteredHistoryTxs.map((transaction) => [
         String(transaction.id),
         transaction.to,
@@ -126,9 +141,7 @@ export default function TreasuryPage() {
     ];
     const csv = rows
       .map((row) =>
-        row
-          .map((cell) => `"${cell.replaceAll('"', '""')}"`)
-          .join(","),
+        row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(","),
       )
       .join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -200,7 +213,9 @@ export default function TreasuryPage() {
 
       {isNetworkMismatch && (
         <div className="card border-red-500/40 bg-red-950/20">
-          <h2 className="text-sm font-semibold text-red-300">Network mismatch</h2>
+          <h2 className="text-sm font-semibold text-red-300">
+            Network mismatch
+          </h2>
           <p className="text-sm text-red-200 mt-1">
             Your wallet is on a different network than the configured contracts.
             Switch networks in Freighter, then retry.
@@ -210,7 +225,9 @@ export default function TreasuryPage() {
 
       {!address && (
         <div className="card border-yellow-500/40 bg-yellow-950/20">
-          <h2 className="text-sm font-semibold text-yellow-300">Wallet disconnected</h2>
+          <h2 className="text-sm font-semibold text-yellow-300">
+            Wallet disconnected
+          </h2>
           <p className="text-sm text-yellow-200 mt-1">
             Connect your wallet to approve or execute treasury transactions.
           </p>
@@ -244,7 +261,9 @@ export default function TreasuryPage() {
           <div>
             <p className="text-sm text-gray-400">Treasury Balance</p>
             <p className="text-3xl font-bold text-white mt-1">
-              {isLoading && balance === BigInt(0) ? "Loading..." : `${formatXlm(balance)} XLM`}
+              {isLoading && balance === BigInt(0)
+                ? "Loading..."
+                : `${formatXlm(balance)} XLM`}
             </p>
           </div>
           <div>
@@ -257,10 +276,15 @@ export default function TreasuryPage() {
             <p className="text-sm text-gray-400">Admin</p>
             <div className="flex items-center gap-2 mt-1">
               <p className="text-sm text-gray-200 font-mono">
-                {config?.admin ? formatAddress(config.admin, { startChars: 6, endChars: 4 }) : "-"}
+                {config?.admin
+                  ? formatAddress(config.admin, { startChars: 6, endChars: 4 })
+                  : "-"}
               </p>
               {config?.admin && (
-                <CopyButton value={config.admin} label="treasury admin address" />
+                <CopyButton
+                  value={config.admin}
+                  label="treasury admin address"
+                />
               )}
             </div>
           </div>
@@ -268,12 +292,18 @@ export default function TreasuryPage() {
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold text-white mb-4">Pending Transactions</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">
+          Pending Transactions
+        </h2>
         <div className="space-y-4">
-          {pendingTxs.filter((transaction) => filteredTransactions.some((item) => item.id === transaction.id)).length === 0 ? (
+          {pendingTxs.filter((transaction) =>
+            filteredTransactions.some((item) => item.id === transaction.id),
+          ).length === 0 ? (
             <div className="card">
               <p className="text-gray-500 text-center py-8">
-                {isLoading ? "Loading transactions..." : "No pending transactions."}
+                {isLoading
+                  ? "Loading transactions..."
+                  : "No pending transactions."}
               </p>
             </div>
           ) : (
@@ -317,7 +347,9 @@ export default function TreasuryPage() {
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold text-white mb-4">Execution History</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">
+          Execution History
+        </h2>
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -325,14 +357,17 @@ export default function TreasuryPage() {
                 <th className="text-left py-3 px-4">ID</th>
                 <th className="text-left py-3 px-4">Destination</th>
                 <th className="text-left py-3 px-4">Amount</th>
-                <th className="text-left py-3 px-4">Time</th>
+                <th className="text-left py-3 px-4">Proposed</th>
+                <th className="text-left py-3 px-4">Confirmed</th>
               </tr>
             </thead>
             <tbody>
               {filteredHistoryTxs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center text-gray-500 py-8">
-                    {isLoading ? "Loading execution history..." : "No executed transactions for the current filters."}
+                  <td colSpan={5} className="text-center text-gray-500 py-8">
+                    {isLoading
+                      ? "Loading execution history..."
+                      : "No executed transactions for the current filters."}
                   </td>
                 </tr>
               ) : (
@@ -352,10 +387,24 @@ export default function TreasuryPage() {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-gray-300 font-mono">
-                      {formatAddress(transaction.to, { startChars: 6, endChars: 4 })}
+                      {formatAddress(transaction.to, {
+                        startChars: 6,
+                        endChars: 4,
+                      })}
                     </td>
-                    <td className="py-3 px-4 text-gray-300">{formatXlm(transaction.amount)} XLM</td>
-                    <td className="py-3 px-4 text-gray-400">{formatAbsoluteDate(transaction.createdAt * 1000)}</td>
+                    <td className="py-3 px-4 text-gray-300">
+                      {formatXlm(transaction.amount)} XLM
+                    </td>
+                    <td className="py-3 px-4 text-gray-400">
+                      {formatAbsoluteDate(transaction.createdAt * 1000)}
+                    </td>
+                    <td className="py-3 px-4 text-gray-400">
+                      {transaction.executedAt != null ? (
+                        formatAbsoluteDate(transaction.executedAt * 1000)
+                      ) : (
+                        <span className="text-gray-600 italic">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))
               )}
@@ -372,7 +421,9 @@ export default function TreasuryPage() {
           />
           <div className="fixed right-0 top-0 h-full w-full max-w-md bg-background border-l border-stellar-border z-50 p-6 shadow-2xl overflow-y-auto transform transition-transform">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white">Transaction Details</h2>
+              <h2 className="text-xl font-bold text-white">
+                Transaction Details
+              </h2>
               <button
                 onClick={() => setSelectedTx(null)}
                 className="text-gray-400 hover:text-white"
@@ -396,7 +447,9 @@ export default function TreasuryPage() {
               <div>
                 <p className="text-xs text-gray-500 uppercase">Destination</p>
                 <div className="mt-1 flex items-center gap-2">
-                  <p className="text-sm text-gray-200 font-mono break-all">{selectedTx.to}</p>
+                  <p className="text-sm text-gray-200 font-mono break-all">
+                    {selectedTx.to}
+                  </p>
                   <CopyButton
                     value={selectedTx.to}
                     label={`transaction ${selectedTx.id} destination address`}
@@ -406,26 +459,35 @@ export default function TreasuryPage() {
 
               <div>
                 <p className="text-xs text-gray-500 uppercase">Amount</p>
-                <p className="text-sm text-gray-200 mt-1">{formatXlm(selectedTx.amount)} XLM</p>
+                <p className="text-sm text-gray-200 mt-1">
+                  {formatXlm(selectedTx.amount)} XLM
+                </p>
               </div>
 
               <div>
                 <p className="text-xs text-gray-500 uppercase">Memo</p>
-                <p className="text-sm text-gray-200 mt-1">{selectedTx.memo || "-"}</p>
+                <p className="text-sm text-gray-200 mt-1">
+                  {selectedTx.memo || "-"}
+                </p>
               </div>
 
               <div>
                 <p className="text-xs text-gray-500 uppercase">Approvals</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {selectedTx.approvals.length === 0 ? (
-                    <span className="text-xs text-gray-500">No approvals yet</span>
+                    <span className="text-xs text-gray-500">
+                      No approvals yet
+                    </span>
                   ) : (
                     selectedTx.approvals.map((approver) => (
                       <span
                         key={`${selectedTx.id}-${approver}`}
                         className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-gray-300"
                       >
-                        {formatAddress(approver, { startChars: 4, endChars: 4 })}
+                        {formatAddress(approver, {
+                          startChars: 4,
+                          endChars: 4,
+                        })}
                       </span>
                     ))
                   )}
@@ -440,16 +502,30 @@ export default function TreasuryPage() {
                   </p>
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs text-gray-500 uppercase">Created</p>
+                  <p className="text-xs text-gray-500 uppercase">Proposed</p>
                   <p className="text-sm text-gray-200 mt-1">
                     {formatAbsoluteDate(selectedTx.createdAt * 1000)}
                   </p>
                 </div>
               </div>
+
+              {selectedTx.executedAt != null && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">
+                    Confirmed on-chain
+                  </p>
+                  <p className="text-sm text-green-400 mt-1 font-medium">
+                    {formatAbsoluteDate(selectedTx.executedAt * 1000)}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="mt-8 pt-6 border-t border-stellar-border">
-              <button className="w-full btn-secondary py-3" onClick={() => setSelectedTx(null)}>
+              <button
+                className="w-full btn-secondary py-3"
+                onClick={() => setSelectedTx(null)}
+              >
                 Close
               </button>
             </div>

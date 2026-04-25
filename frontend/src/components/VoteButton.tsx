@@ -21,9 +21,14 @@ export const VoteButton: React.FC<VoteButtonProps> = ({
   onVoteSuccess,
 }) => {
   const { isConnected } = useFreighter();
-  const { vote, isLoading } = useGovernance();
+  const { vote, pendingVotes } = useGovernance();
 
-  const isDisabled = hasVoted || votingClosed || !isConnected || isLoading || isPending;
+  // Use per-proposal pending state from the map rather than the global isLoading
+  // flag so that voting on one proposal doesn't disable buttons on others.
+  const isThisVotePending = isPending || pendingVotes.has(proposalId);
+
+  const isDisabled =
+    hasVoted || votingClosed || !isConnected || isThisVotePending;
 
   const handleVote = async () => {
     if (isDisabled) {
@@ -32,7 +37,9 @@ export const VoteButton: React.FC<VoteButtonProps> = ({
 
     try {
       await vote(proposalId, voteFor);
-      toast.success(`Vote submitted ${voteFor ? "for" : "against"} proposal #${proposalId}`);
+      toast.success(
+        `Vote submitted ${voteFor ? "for" : "against"} proposal #${proposalId}`,
+      );
       await onVoteSuccess?.();
     } catch (error: unknown) {
       toast.error(
@@ -48,7 +55,7 @@ export const VoteButton: React.FC<VoteButtonProps> = ({
       ? "Voting is closed"
       : !isConnected
         ? "Connect your wallet to vote"
-        : isPending
+        : isThisVotePending
           ? "Waiting for vote confirmation"
           : "";
 
@@ -60,7 +67,7 @@ export const VoteButton: React.FC<VoteButtonProps> = ({
       title={title}
       type="button"
     >
-      {isLoading || isPending
+      {isThisVotePending
         ? "Submitting..."
         : voteFor
           ? "Vote For"
