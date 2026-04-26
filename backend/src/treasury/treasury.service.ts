@@ -10,6 +10,8 @@ export const TransactionSchema = z.object({
   contract_id: z.string(),
   topic_1: z.string().nullable(),
   topic_2: z.string().nullable(),
+  event_name: z.string().nullable(),
+  event_topics: z.any(),
   event_data: z.any(),
   ledger: z.number(),
   timestamp: z.number().nullable(),

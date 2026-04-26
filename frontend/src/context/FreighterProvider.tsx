@@ -7,6 +7,7 @@ import {
   getPublicKey,
   getNetwork,
 } from "@stellar/freighter-api";
+import { classifyError, AppError, isAppError } from "@/lib/errors";
 
 export interface FreighterContextType {
   address: string | null;
@@ -76,8 +77,9 @@ export const FreighterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } else {
         setError("User denied access");
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to connect to Freighter");
+    } catch (err) {
+      const classified = classifyError(err);
+      setError(classified.message || "Failed to connect to Freighter");
     } finally {
       setIsConnecting(false);
     }

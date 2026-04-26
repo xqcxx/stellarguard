@@ -19,6 +19,8 @@ export interface ParsedEvent {
   contractId: string;
   topic1: string | null;
   topic2: string | null;
+  eventName: string | null;
+  eventTopics: unknown[] | null;
   data: Record<string, unknown>;
   ledger: number;
   timestamp: number | null;
@@ -116,15 +118,13 @@ export function parseRawEvent(rawEvent: {
   const data = parseEventData(rawEvent.value);
 
   const eventName = getEventName(topic1, topic2);
-  if (eventName) {
-    data._eventName = eventName;
-  }
-  data._topics = allTopics;
 
   return {
     contractId: rawEvent.contractId,
     topic1,
     topic2,
+    eventName,
+    eventTopics: allTopics,
     data,
     ledger: rawEvent.ledger,
     timestamp: null,

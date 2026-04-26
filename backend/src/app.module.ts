@@ -6,6 +6,7 @@ import { GovernanceController } from "./governance/governance.controller";
 import { GovernanceService } from "./governance/governance.service";
 import { VaultController } from "./vault/vault.controller";
 import { VaultService } from "./vault/vault.service";
+import { ListenerService } from "./listener.service";
 
 @Module({
   imports: [],
@@ -15,6 +16,6 @@ import { VaultService } from "./vault/vault.service";
     GovernanceController,
     VaultController,
   ],
-  providers: [TreasuryService, GovernanceService, VaultService],
+  providers: [TreasuryService, GovernanceService, VaultService, ListenerService],
 })
 export class AppModule {}

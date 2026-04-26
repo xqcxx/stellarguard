@@ -10,8 +10,10 @@ import { parseRawEvent, ParsedEvent } from "./parser";
 
 const MAX_BACKOFF_MS = 30_000;
 const BASE_BACKOFF_MS = 1_000;
+const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 10_000;
 
 let running = true;
+let shutdownForced = false;
 
 /**
  * Convert a ParsedEvent to a StoredEvent for database insertion.
@@ -21,6 +23,8 @@ function toStoredEvent(parsed: ParsedEvent): StoredEvent {
     contract_id: parsed.contractId,
     topic_1: parsed.topic1,
     topic_2: parsed.topic2,
+    event_name: parsed.eventName,
+    event_topics: parsed.eventTopics,
     event_data: parsed.data,
     ledger: parsed.ledger,
     timestamp: parsed.timestamp,
@@ -108,7 +112,7 @@ async function pollEvents(
   }
 
   for (const parsed of parsedEvents) {
-    const eventName = parsed.data._eventName || `${parsed.topic1}:${parsed.topic2}`;
+    const eventName = parsed.eventName || `${parsed.topic1}:${parsed.topic2}`;
     console.log(
       `[Ledger ${parsed.ledger}] ${eventName} from ${parsed.contractId}`
     );
@@ -184,4 +188,43 @@ export async function startListener(): Promise<void> {
  */
 export function stopListener(): void {
   running = false;
+}
+
+/**
+ * Wait for in-flight events to complete, then resolve.
+ */
+export async function waitForCompletion(): Promise<void> {
+  return new Promise((resolve) => {
+    const checkInterval = setInterval(() => {
+      if (!running || shutdownForced) {
+        clearInterval(checkInterval);
+        resolve();
+      }
+    }, 100);
+
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      shutdownForced = true;
+      resolve();
+    }, GRACEFUL_SHUTDOWN_TIMEOUT_MS);
+  });
+}
+
+/**
+ * Handle process signals for graceful shutdown.
+ */
+export function setupSignalHandlers(): void {
+  process.on("SIGTERM", async () => {
+    console.log("Received SIGTERM, shutting down gracefully...");
+    stopListener();
+    await waitForCompletion();
+    process.exit(0);
+  });
+
+  process.on("SIGINT", async () => {
+    console.log("Received SIGINT, shutting down gracefully...");
+    stopListener();
+    await waitForCompletion();
+    process.exit(0);
+  });
 }

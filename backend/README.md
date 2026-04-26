@@ -49,3 +49,15 @@ This directory contains PostgreSQL migration scripts for the StellarGuard backen
 - Addresses are stored as text (Stellar public keys)
 - Timestamps use TIMESTAMP WITH TIME ZONE for UTC storage
 - JSONB fields store structured data (proposal actions, transaction approvals)
+
+## Migration Workflow
+
+Run the database migration script to initialize or update the schema:
+
+```bash
+npm run migrate
+```
+
+This creates the following tables:
+- `events`: Stores contract events with topic_1, topic_2, event_name, event_topics, and event_data columns
+- `event_cursor`: Tracks the last processed event cursor for resumable polling
