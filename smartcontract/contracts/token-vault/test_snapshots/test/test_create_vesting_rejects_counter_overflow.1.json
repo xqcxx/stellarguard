@@ -1,6 +1,6 @@
 {
   "generators": {
-    "address": 3,
+    "address": 4,
     "nonce": 0
   },
   "auth": [
@@ -24,10 +24,7 @@
                   ]
                 },
                 {
-                  "u32": 50
-                },
-                {
-                  "u32": 1000
+                  "u32": 1
                 }
               ]
             }
@@ -36,6 +33,7 @@
         }
       ]
     ],
+    [],
     []
   ],
   "ledger": {
@@ -87,19 +85,7 @@
                         "key": {
                           "vec": [
                             {
-                              "symbol": "Initialized"
-                            }
-                          ]
-                        },
-                        "val": {
-                          "bool": true
-                        }
-                      },
-                      {
-                        "key": {
-                          "vec": [
-                            {
-                              "symbol": "Members"
+                              "symbol": "EmergencySigners"
                             }
                           ]
                         },
@@ -115,7 +101,31 @@
                         "key": {
                           "vec": [
                             {
-                              "symbol": "ProposalCounter"
+                              "symbol": "EmergencyThreshold"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "u32": 1
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "Initialized"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "bool": true
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "LockCounter"
                             }
                           ]
                         },
@@ -127,24 +137,27 @@
                         "key": {
                           "vec": [
                             {
-                              "symbol": "QuorumPercent"
+                              "symbol": "TotalLocked"
                             }
                           ]
                         },
                         "val": {
-                          "u32": 50
+                          "i128": {
+                            "hi": 0,
+                            "lo": 0
+                          }
                         }
                       },
                       {
                         "key": {
                           "vec": [
                             {
-                              "symbol": "VotingPeriod"
+                              "symbol": "VestingCounter"
                             }
                           ]
                         },
                         "val": {
-                          "u32": 1000
+                          "u64": 18446744073709551615
                         }
                       }
                     ]
@@ -245,10 +258,7 @@
                   ]
                 },
                 {
-                  "u32": 50
-                },
-                {
-                  "u32": 1000
+                  "u32": 1
                 }
               ]
             }
@@ -266,7 +276,7 @@
           "v0": {
             "topics": [
               {
-                "symbol": "gov"
+                "symbol": "vault"
               },
               {
                 "symbol": "init"
@@ -279,9 +289,6 @@
                 },
                 {
                   "u32": 1
-                },
-                {
-                  "u32": 50
                 }
               ]
             }
@@ -303,17 +310,7 @@
               }
             ],
             "data": {
-              "vec": [
-                {
-                  "string": "Governance initialized: {} members, {}% quorum"
-                },
-                {
-                  "u32": 1
-                },
-                {
-                  "u32": 50
-                }
-              ]
+              "string": "Token vault initialized"
             }
           }
         }
@@ -356,35 +353,31 @@
                 "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
               },
               {
-                "symbol": "create_proposal"
+                "symbol": "create_vesting"
               }
             ],
             "data": {
               "vec": [
                 {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "string": "test"
-                },
-                {
-                  "string": ""
-                },
-                {
-                  "vec": [
-                    {
-                      "symbol": "General"
-                    }
-                  ]
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
                 },
                 {
                   "i128": {
                     "hi": 0,
-                    "lo": 0
+                    "lo": 1000000
                   }
                 },
                 {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                  "u64": 31536000
+                },
+                {
+                  "u64": 0
+                },
+                {
+                  "symbol": "team"
                 }
               ]
             }
@@ -405,12 +398,12 @@
                 "symbol": "fn_return"
               },
               {
-                "symbol": "create_proposal"
+                "symbol": "create_vesting"
               }
             ],
             "data": {
               "error": {
-                "contract": 10
+                "contract": 13
               }
             }
           }
@@ -431,7 +424,7 @@
               },
               {
                 "error": {
-                  "contract": 10
+                  "contract": 13
                 }
               }
             ],
@@ -456,7 +449,7 @@
               },
               {
                 "error": {
-                  "contract": 10
+                  "contract": 13
                 }
               }
             ],
@@ -466,34 +459,30 @@
                   "string": "contract try_call failed"
                 },
                 {
-                  "symbol": "create_proposal"
+                  "symbol": "create_vesting"
                 },
                 {
                   "vec": [
                     {
-                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                     },
                     {
-                      "string": "test"
-                    },
-                    {
-                      "string": ""
-                    },
-                    {
-                      "vec": [
-                        {
-                          "symbol": "General"
-                        }
-                      ]
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
                     },
                     {
                       "i128": {
                         "hi": 0,
-                        "lo": 0
+                        "lo": 1000000
                       }
                     },
                     {
-                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                      "u64": 31536000
+                    },
+                    {
+                      "u64": 0
+                    },
+                    {
+                      "symbol": "team"
                     }
                   ]
                 }

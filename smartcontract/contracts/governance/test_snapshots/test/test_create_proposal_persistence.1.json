@@ -49,10 +49,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "test"
+                  "string": "test"
                 },
                 {
-                  "symbol": "test"
+                  "string": "test"
                 },
                 {
                   "vec": [
@@ -162,7 +162,7 @@
                         "symbol": "description"
                       },
                       "val": {
-                        "symbol": "test"
+                        "string": "test"
                       }
                     },
                     {
@@ -214,7 +214,7 @@
                         "symbol": "title"
                       },
                       "val": {
-                        "symbol": "test"
+                        "string": "test"
                       }
                     },
                     {
@@ -600,10 +600,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "test"
+                  "string": "test"
                 },
                 {
-                  "symbol": "test"
+                  "string": "test"
                 },
                 {
                   "vec": [
@@ -802,7 +802,7 @@
                     "symbol": "description"
                   },
                   "val": {
-                    "symbol": "test"
+                    "string": "test"
                   }
                 },
                 {
@@ -854,7 +854,7 @@
                     "symbol": "title"
                   },
                   "val": {
-                    "symbol": "test"
+                    "string": "test"
                   }
                 },
                 {

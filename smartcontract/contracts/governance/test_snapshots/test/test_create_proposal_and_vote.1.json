@@ -55,10 +55,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "fund_dev"
+                  "string": "Fund development sprint"
                 },
                 {
-                  "symbol": "dev_work"
+                  "string": "Allocate budget for the next engineering sprint"
                 },
                 {
                   "vec": [
@@ -218,7 +218,7 @@
                         "symbol": "description"
                       },
                       "val": {
-                        "symbol": "dev_work"
+                        "string": "Allocate budget for the next engineering sprint"
                       }
                     },
                     {
@@ -270,7 +270,7 @@
                         "symbol": "title"
                       },
                       "val": {
-                        "symbol": "fund_dev"
+                        "string": "Fund development sprint"
                       }
                     },
                     {
@@ -836,10 +836,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "fund_dev"
+                  "string": "Fund development sprint"
                 },
                 {
-                  "symbol": "dev_work"
+                  "string": "Allocate budget for the next engineering sprint"
                 },
                 {
                   "vec": [
@@ -1284,7 +1284,7 @@
                     "symbol": "description"
                   },
                   "val": {
-                    "symbol": "dev_work"
+                    "string": "Allocate budget for the next engineering sprint"
                   }
                 },
                 {
@@ -1336,7 +1336,7 @@
                     "symbol": "title"
                   },
                   "val": {
-                    "symbol": "fund_dev"
+                    "string": "Fund development sprint"
                   }
                 },
                 {

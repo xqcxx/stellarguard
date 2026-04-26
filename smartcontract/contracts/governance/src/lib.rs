@@ -42,6 +42,8 @@ pub enum Error {
     Overflow = 13,
     /// Storage operation failed.
     StorageError = 14,
+    /// Attempted to add an address that is already a member.
+    MemberAlreadyExists = 15,
 }
 
 // ============================================================================
@@ -516,7 +518,7 @@ impl GovernanceContract {
         // Check not already a member
         for i in 0..members.len() {
             if members.get(i).unwrap() == *member {
-                return Ok(()); // Already a member, no-op
+                return Err(Error::MemberAlreadyExists);
             }
         }
 
@@ -1521,5 +1523,39 @@ mod test {
         // Test maximum valid value
         client.set_quorum(&admin, &100);
         assert_eq!(client.get_config().quorum_percent, 100);
+    }
+
+    #[test]
+    fn test_execute_add_member_proposal_fails_for_existing_member() {
+        let (env, admin, client) = setup_contract();
+
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let members = Vec::from_array(&env, [member1.clone(), member2.clone()]);
+        client.initialize(&admin, &members, &50, &10);
+
+        let proposal_id = client.create_proposal(
+            &member1,
+            &text(&env, "dup_mem"),
+            &text(&env, "try_add_existing"),
+            &ProposalAction::AddMember,
+            &0,
+            &member2,
+        );
+
+        client.vote(&member1, &proposal_id, &true);
+        client.vote(&member2, &proposal_id, &true);
+        env.ledger().set_sequence_number(100);
+        let status = client.finalize(&member1, &proposal_id);
+        assert_eq!(status, ProposalStatus::Passed);
+
+        let result = client.try_execute_proposal(&admin, &proposal_id);
+        assert_eq!(result, Err(Ok(Error::MemberAlreadyExists)));
+
+        let proposal = client.get_proposal(&proposal_id);
+        assert_eq!(proposal.status, ProposalStatus::Passed);
+
+        let all_members = client.get_members();
+        assert_eq!(all_members.len(), 2);
     }
 }

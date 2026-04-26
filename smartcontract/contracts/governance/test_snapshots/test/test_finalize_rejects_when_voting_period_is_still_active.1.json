@@ -52,10 +52,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "active"
+                  "string": "active"
                 },
                 {
-                  "symbol": "wait"
+                  "string": "wait"
                 },
                 {
                   "vec": [
@@ -190,7 +190,7 @@
                         "symbol": "description"
                       },
                       "val": {
-                        "symbol": "wait"
+                        "string": "wait"
                       }
                     },
                     {
@@ -242,7 +242,7 @@
                         "symbol": "title"
                       },
                       "val": {
-                        "symbol": "active"
+                        "string": "active"
                       }
                     },
                     {
@@ -718,10 +718,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "active"
+                  "string": "active"
                 },
                 {
-                  "symbol": "wait"
+                  "string": "wait"
                 },
                 {
                   "vec": [

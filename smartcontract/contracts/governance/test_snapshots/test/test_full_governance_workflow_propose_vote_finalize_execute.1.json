@@ -55,10 +55,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "add_mem"
+                  "string": "add_mem"
                 },
                 {
-                  "symbol": "expand"
+                  "string": "expand DAO membership beyond symbol limits"
                 },
                 {
                   "vec": [
@@ -288,7 +288,7 @@
                         "symbol": "description"
                       },
                       "val": {
-                        "symbol": "expand"
+                        "string": "expand DAO membership beyond symbol limits"
                       }
                     },
                     {
@@ -340,7 +340,7 @@
                         "symbol": "title"
                       },
                       "val": {
-                        "symbol": "add_mem"
+                        "string": "add_mem"
                       }
                     },
                     {
@@ -1059,10 +1059,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "add_mem"
+                  "string": "add_mem"
                 },
                 {
-                  "symbol": "expand"
+                  "string": "expand DAO membership beyond symbol limits"
                 },
                 {
                   "vec": [
@@ -1808,7 +1808,7 @@
                     "symbol": "description"
                   },
                   "val": {
-                    "symbol": "expand"
+                    "string": "expand DAO membership beyond symbol limits"
                   }
                 },
                 {
@@ -1860,7 +1860,7 @@
                     "symbol": "title"
                   },
                   "val": {
-                    "symbol": "add_mem"
+                    "string": "add_mem"
                   }
                 },
                 {

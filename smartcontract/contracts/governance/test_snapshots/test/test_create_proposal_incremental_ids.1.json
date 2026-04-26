@@ -49,51 +49,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "test1"
+                  "string": "test1"
                 },
                 {
-                  "symbol": "test1"
-                },
-                {
-                  "vec": [
-                    {
-                      "symbol": "General"
-                    }
-                  ]
-                },
-                {
-                  "i128": {
-                    "hi": 0,
-                    "lo": 0
-                  }
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "create_proposal",
-              "args": [
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                },
-                {
-                  "symbol": "test2"
-                },
-                {
-                  "symbol": "test2"
+                  "string": "test1"
                 },
                 {
                   "vec": [
@@ -131,10 +90,51 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "test3"
+                  "string": "test2"
                 },
                 {
-                  "symbol": "test3"
+                  "string": "test2"
+                },
+                {
+                  "vec": [
+                    {
+                      "symbol": "General"
+                    }
+                  ]
+                },
+                {
+                  "i128": {
+                    "hi": 0,
+                    "lo": 0
+                  }
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "create_proposal",
+              "args": [
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                },
+                {
+                  "string": "test3"
+                },
+                {
+                  "string": "test3"
                 },
                 {
                   "vec": [
@@ -244,7 +244,7 @@
                         "symbol": "description"
                       },
                       "val": {
-                        "symbol": "test1"
+                        "string": "test1"
                       }
                     },
                     {
@@ -296,7 +296,7 @@
                         "symbol": "title"
                       },
                       "val": {
-                        "symbol": "test1"
+                        "string": "test1"
                       }
                     },
                     {
@@ -405,7 +405,7 @@
                         "symbol": "description"
                       },
                       "val": {
-                        "symbol": "test2"
+                        "string": "test2"
                       }
                     },
                     {
@@ -457,7 +457,7 @@
                         "symbol": "title"
                       },
                       "val": {
-                        "symbol": "test2"
+                        "string": "test2"
                       }
                     },
                     {
@@ -566,7 +566,7 @@
                         "symbol": "description"
                       },
                       "val": {
-                        "symbol": "test3"
+                        "string": "test3"
                       }
                     },
                     {
@@ -618,7 +618,7 @@
                         "symbol": "title"
                       },
                       "val": {
-                        "symbol": "test3"
+                        "string": "test3"
                       }
                     },
                     {
@@ -1070,10 +1070,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "test1"
+                  "string": "test1"
                 },
                 {
-                  "symbol": "test1"
+                  "string": "test1"
                 },
                 {
                   "vec": [
@@ -1217,10 +1217,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "test2"
+                  "string": "test2"
                 },
                 {
-                  "symbol": "test2"
+                  "string": "test2"
                 },
                 {
                   "vec": [
@@ -1364,10 +1364,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "test3"
+                  "string": "test3"
                 },
                 {
-                  "symbol": "test3"
+                  "string": "test3"
                 },
                 {
                   "vec": [

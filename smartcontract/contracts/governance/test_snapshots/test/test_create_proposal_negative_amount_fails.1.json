@@ -365,10 +365,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "symbol": "test"
+                  "string": "test"
                 },
                 {
-                  "symbol": "test"
+                  "string": "test"
                 },
                 {
                   "vec": [
@@ -474,10 +474,10 @@
                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                     },
                     {
-                      "symbol": "test"
+                      "string": "test"
                     },
                     {
-                      "symbol": "test"
+                      "string": "test"
                     },
                     {
                       "vec": [
