@@ -472,6 +472,22 @@ impl AccessControlContract {
             return Err(Error::Unauthorized);
         }
 
+        // Check if new owner already has a role before we change anything
+        let new_owner_had_role = env
+            .storage()
+            .persistent()
+            .has(&DataKey::Role(new_owner.clone()));
+        let old_new_owner_role = if new_owner_had_role {
+            let assignment: RoleAssignment = env
+                .storage()
+                .persistent()
+                .get(&DataKey::Role(new_owner.clone()))
+                .unwrap();
+            Some(assignment.role)
+        } else {
+            None
+        };
+
         // Update owner
         env.storage().instance().set(&DataKey::Owner, &new_owner);
 
@@ -516,6 +532,47 @@ impl AccessControlContract {
         }
 
         // Update role counts
+        // If new owner had a previous role, decrement that role's count
+        if let Some(old_role) = old_new_owner_role {
+            let old_role_val = old_role as u32;
+            let mut old_count: u32 = env
+                .storage()
+                .instance()
+                .get(&DataKey::RoleCount(old_role_val))
+                .unwrap_or(1);
+            if old_count > 0 {
+                old_count -= 1;
+            }
+            env.storage()
+                .instance()
+                .set(&DataKey::RoleCount(old_role_val), &old_count);
+        }
+
+        // Decrement owner_count (old owner is no longer owner)
+        let mut owner_count: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::RoleCount(Role::Owner as u32))
+            .unwrap_or(1);
+        if owner_count > 0 {
+            owner_count -= 1;
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::RoleCount(Role::Owner as u32), &owner_count);
+
+        // Increment owner_count (new owner is now owner)
+        let mut owner_count: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::RoleCount(Role::Owner as u32))
+            .unwrap_or(0);
+        owner_count += 1;
+        env.storage()
+            .instance()
+            .set(&DataKey::RoleCount(Role::Owner as u32), &owner_count);
+
+        // Increment admin_count (old owner is now admin)
         let mut admin_count: u32 = env
             .storage()
             .instance()
@@ -840,6 +897,28 @@ mod test {
         assert_eq!(client.is_owner(&new_owner), true);
         assert_eq!(client.is_owner(&owner), false);
         assert_eq!(client.is_admin_or_above(&owner), true);
+    }
+
+    #[test]
+    fn test_transfer_ownership_role_counts() {
+        let (env, owner, client) = setup_contract();
+
+        client.initialize(&owner);
+
+        // Before transfer: owner_count = 1, admin_count = 0
+        let summary_before = client.get_summary();
+        assert_eq!(summary_before.owner_count, 1);
+        assert_eq!(summary_before.admin_count, 0);
+
+        let new_owner = Address::generate(&env);
+
+        client.transfer_ownership(&owner, &new_owner);
+
+        // After transfer: owner_count should be 1 (new owner), admin_count should be 1 (old owner)
+        let summary_after = client.get_summary();
+        assert_eq!(summary_after.owner_count, 1, "owner_count should be 1 after transfer");
+        assert_eq!(summary_after.admin_count, 1, "admin_count should be 1 after transfer");
+        assert_eq!(summary_after.total_members, 2, "total_members should be 2");
     }
 
     #[test]
