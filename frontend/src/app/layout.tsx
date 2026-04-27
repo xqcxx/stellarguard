@@ -9,6 +9,7 @@ import { WalletConnect } from "@/components/WalletConnect";
 import { DiagnosticsPanel } from "@/components/DiagnosticsPanel";
 import { ToastContainer } from "@/components/Toast";
 import { NetworkMismatchBanner } from "@/components/NetworkMismatchBanner";
+import { MobileNav } from "@/components/MobileNav";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -88,8 +89,9 @@ export default function RootLayout({
                   <Link href="/governance" className="nav-link px-4">Governance</Link>
                 </div>
 
-                <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-4">
                   <WalletConnect />
+                  <MobileNav />
                 </div>
               </div>
             </div>

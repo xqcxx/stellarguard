@@ -67,6 +67,8 @@ pub enum DataKey {
     Initialized,
     /// Per-depositor, per-token balance: (depositor, token_address) → i128.
     TokenBalance(Address, Address),
+    /// Sum of amounts across all pending (non-executed) proposals.
+    Reserved,
 }
 
 /// A pending transaction proposal in the multi-sig treasury.
@@ -162,6 +164,7 @@ impl TreasuryContract {
         env.storage().instance().set(&DataKey::Signers, &signers);
         env.storage().instance().set(&DataKey::Balance, &0_i128);
         env.storage().instance().set(&DataKey::TxCounter, &0_u64);
+        env.storage().instance().set(&DataKey::Reserved, &0_i128);
 
         // Emit initialization event
         env.events().publish(
@@ -331,11 +334,18 @@ impl TreasuryContract {
             return Err(Error::InvalidAmount);
         }
 
-        // Check sufficient balance
+        // Check sufficient *unreserved* balance — multiple pending proposals
+        // must not be able to collectively over-commit the same funds.
         let balance: i128 = env.storage().instance().get(&DataKey::Balance).unwrap_or(0);
-        if balance < amount {
+        let reserved: i128 = env.storage().instance().get(&DataKey::Reserved).unwrap_or(0);
+        if balance - reserved < amount {
             return Err(Error::InsufficientFunds);
         }
+
+        // Reserve the funds so subsequent proposals cannot reference them.
+        env.storage()
+            .instance()
+            .set(&DataKey::Reserved, &(reserved + amount));
 
         // Get and increment counter
         let tx_id: u64 = env
@@ -517,6 +527,12 @@ impl TreasuryContract {
         env.storage()
             .instance()
             .set(&DataKey::Balance, &new_balance);
+
+        // Release the reservation that was placed at proposal time.
+        let reserved: i128 = env.storage().instance().get(&DataKey::Reserved).unwrap_or(0);
+        env.storage()
+            .instance()
+            .set(&DataKey::Reserved, &(reserved - transaction.amount));
 
         // Mark as executed
         transaction.executed = true;
@@ -1165,6 +1181,42 @@ mod test {
             &recipient,
             &1_000_000,
             &String::from_str(&env, "rent"),
+        );
+        assert_eq!(result, Err(Ok(Error::InsufficientFunds)));
+    }
+
+    /// Regression test: two proposals that together exceed the balance must be
+    /// rejected at proposal time, not silently allowed to race to execute.
+    #[test]
+    fn test_propose_reserves_funds_prevents_double_spend() {
+        let (env, admin, _contract_id, client) = setup_contract();
+
+        let signer1 = Address::generate(&env);
+        let signer2 = Address::generate(&env);
+        let signers = Vec::from_array(&env, [signer1.clone(), signer2.clone()]);
+        let asset = initialize_treasury(&client, &env, &admin, 1, &signers);
+
+        // Deposit exactly 1_000_000
+        mint_asset(&env, &asset, &signer1, 1_000_000);
+        client.deposit(&signer1, &1_000_000);
+
+        let recipient = Address::generate(&env);
+
+        // First proposal for the full balance — should succeed
+        let _tx1 = client.propose_withdrawal(
+            &signer1,
+            &recipient,
+            &1_000_000,
+            &String::from_str(&env, "first"),
+        );
+
+        // Second proposal for any amount — must be rejected because all funds
+        // are already reserved by the first pending proposal.
+        let result = client.try_propose_withdrawal(
+            &signer2,
+            &recipient,
+            &1,
+            &String::from_str(&env, "second"),
         );
         assert_eq!(result, Err(Ok(Error::InsufficientFunds)));
     }

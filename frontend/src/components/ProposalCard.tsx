@@ -45,7 +45,10 @@ export function ProposalCard({
         : null;
 
   return (
-    <Link href={"/proposals/" + id} className="block">
+    <Link
+      href={"/proposals/" + id}
+      className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-stellar-blue focus-visible:ring-offset-2 focus-visible:ring-offset-stellar-darker"
+    >
       <div className="card hover:border-primary-600/50 transition-colors cursor-pointer">
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0">

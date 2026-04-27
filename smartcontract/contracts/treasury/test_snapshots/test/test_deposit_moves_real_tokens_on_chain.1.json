@@ -336,6 +336,21 @@
                         "key": {
                           "vec": [
                             {
+                              "symbol": "Reserved"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "i128": {
+                            "hi": 0,
+                            "lo": 0
+                          }
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
                               "symbol": "Signers"
                             }
                           ]
