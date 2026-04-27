@@ -1,4 +1,6 @@
 # Build artifacts
+dist/
+build/
 target/
 node_modules/
 .next/
@@ -9,6 +11,8 @@ out/
 .idea/
 *.swp
 *.swo
+*.iml
+*.tsbuildinfo
 
 # Environment
 .env
@@ -19,6 +23,8 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # Logs
 *.log

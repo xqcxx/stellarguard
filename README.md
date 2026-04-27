@@ -110,40 +110,60 @@ stellar/
 
 ### 1. Prerequisites
 
-- **Node.js** v18+
-- **Rust** & Cargo (for smart contracts)
-- **Soroban CLI** (`cargo install soroban-cli`)
-- **Freighter Wallet** browser extension
+| Tool | Version | Notes |
+|------|---------|-------|
+| **Node.js** | 20+ | Use [nvm](https://github.com/nvm-sh/nvm) to manage versions |
+| **Rust & Cargo** | stable | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
+| **Soroban CLI** | latest | `cargo install --locked soroban-cli` |
+| **Docker & Docker Compose** | 24+ | Required to run the full local stack |
+| **Freighter Wallet** | latest | Browser extension for Stellar transactions |
 
-### 2. Installation
+### 2. Quick Start
 
-Clone the repository:
+**Clone the repository:**
 
 ```bash
 git clone https://github.com/YourOrg/StellarGuard.git
 cd StellarGuard
 ```
 
-Verify workspace integrity:
+**Option A — Docker (recommended, runs everything):**
 
 ```bash
-cargo build --all
+cp .env.docker .env          # copy default environment config
+docker compose up --build    # starts frontend, backend, postgres, redis, indexer
 ```
 
-Setup Smart Contracts:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3001/api
+- API Docs (Swagger): http://localhost:3001/api/docs
+
+**Option B — Manual setup:**
+
+*Smart contracts:*
 
 ```bash
 cd smartcontract
-# See docs/ISSUES-SMARTCONTRACT.md for contribution tasks
+cargo build --all            # verify Rust/Soroban toolchain
+cargo test --all             # run unit tests
 ```
 
-Setup Frontend:
+*Frontend:*
 
 ```bash
 cd frontend
 npm install
-npm run dev
-# See docs/ISSUES-FRONTEND.md for contribution tasks
+cp .env.local.example .env.local   # configure RPC URL and network
+npm run dev                        # starts on http://localhost:3000
+```
+
+*Backend API & indexer:*
+
+```bash
+cd backend
+npm install
+cp .env.example .env               # configure DATABASE_URL and RPC endpoint
+npm run dev                        # starts API on http://localhost:3001
 ```
 
 ---
@@ -162,6 +182,13 @@ We have separated our task lists for better organization. Please refer to the sp
 - 📘 [Smart Contract Guide](docs/SMARTCONTRACT_GUIDE.md)
 - 🌐 [Frontend Integration Guide](docs/FRONTEND_GUIDE.md)
 
+**Architecture Decisions:**
+
+- 🗂️ [ADR-001: Freighter Wallet Integration](docs/adr/001-wallet-integration.md)
+- 🗂️ [ADR-002: Data Loading & Request Guards](docs/adr/002-data-loading.md)
+- 🗂️ [ADR-003: Transaction Pipeline](docs/adr/003-transaction-pipeline.md)
+- 🗂️ [ADR-004: NestJS Backend Choice](docs/adr/004-nestjs-backend.md)
+
 ---
 
 ## 🤝 Contributing
@@ -170,10 +197,10 @@ We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for 
 
 **Quick Start for Contributors:**
 
-1. Pick an issue from `docs/`.
-2. Fork the repo.
-3. Create a feature branch (`feat/my-feature`).
-4. Submit a PR!
+1. Pick an issue from `docs/ISSUES-*.md`.
+2. Fork the repo and create a branch: `feat/<issue-id>-<description>` (e.g. `feat/BE-1-api-scaffold`).
+3. Make your changes, run tests, and update the checkbox in the relevant `docs/ISSUES-*.md`.
+4. Open a PR against `main` — see [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
 
 ---
 
