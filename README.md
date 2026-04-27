@@ -168,6 +168,57 @@ npm run dev                        # starts API on http://localhost:3001
 
 ---
 
+## 🚀 Deploying Contracts
+
+### Prerequisites
+
+| Tool | Install |
+|------|---------|
+| **Stellar CLI** | `cargo install --locked stellar-cli` |
+| **Rust + wasm32 target** | `rustup target add wasm32-unknown-unknown` |
+
+### One-command Testnet Deploy
+
+```bash
+# Set your deployer identity (Stellar secret key or CLI identity name)
+export DEPLOY_SOURCE=my-deployer-identity
+
+# Run the deploy script
+./scripts/deploy.sh --network testnet --source "$DEPLOY_SOURCE"
+```
+
+The script will:
+1. Build all four contracts with `stellar contract build` (release WASM)
+2. Deploy each contract to the specified network
+3. Write contract IDs to `scripts/deployed-contracts.json`
+4. Print a summary of all deployed contract addresses
+
+### Copy Contract IDs to Frontend
+
+After deployment, copy the printed IDs into `frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_TREASURY_CONTRACT_ID=<treasury-id-from-deployed-contracts.json>
+NEXT_PUBLIC_GOVERNANCE_CONTRACT_ID=<governance-id>
+NEXT_PUBLIC_VAULT_CONTRACT_ID=<token_vault-id>
+NEXT_PUBLIC_ACL_CONTRACT_ID=<access_control-id>
+```
+
+### Automated Deployment via GitHub Actions
+
+Push a version tag to trigger the [deploy workflow](.github/workflows/deploy.yml):
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow installs the Stellar CLI, builds contracts, deploys to testnet, uploads `deployed-contracts.json` as a build artifact, and commits the updated file back to `main`.
+
+**Required secret:** `STELLAR_DEPLOY_SECRET_KEY` — set this in your repository's Settings → Secrets.
+
+---
+
 ## 📚 Documentation & Trackers
 
 We have separated our task lists for better organization. Please refer to the specific tracker for your area of contribution:

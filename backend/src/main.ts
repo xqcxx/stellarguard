@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Logger } from '@nestjs/common';
+import { Logger, VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { config } from './config';
 import 'reflect-metadata';
@@ -23,6 +23,13 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     preflightContinue: false,
     optionsSuccessStatus: 204,
+  });
+
+  // Header-based API versioning — pass X-API-Version: 1 to target a specific version.
+  // Controllers without @Version() respond to all versions (version-neutral).
+  app.enableVersioning({
+    type: VersioningType.HEADER,
+    header: 'X-API-Version',
   });
 
   // Setup Swagger/OpenAPI documentation

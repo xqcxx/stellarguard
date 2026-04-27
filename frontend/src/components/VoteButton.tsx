@@ -49,7 +49,7 @@ export const VoteButton: React.FC<VoteButtonProps> = ({
     }
   };
 
-  const title = hasVoted
+  const disabledReason = hasVoted
     ? "You have already voted on this proposal"
     : votingClosed
       ? "Voting is closed"
@@ -59,19 +59,33 @@ export const VoteButton: React.FC<VoteButtonProps> = ({
           ? "Waiting for vote confirmation"
           : "";
 
+  const baseLabel = voteFor ? "Vote For" : "Vote Against";
+  const ariaLabel = disabledReason
+    ? `${baseLabel}: ${disabledReason}`
+    : baseLabel;
+  const descId = `vote-desc-${proposalId}-${voteFor ? "for" : "against"}`;
+
   return (
-    <button
-      className={voteFor ? "btn-primary" : "btn-secondary"}
-      disabled={isDisabled}
-      onClick={handleVote}
-      title={title}
-      type="button"
-    >
-      {isThisVotePending
-        ? "Submitting..."
-        : voteFor
-          ? "Vote For"
-          : "Vote Against"}
-    </button>
+    <>
+      {isDisabled && disabledReason && (
+        <span id={descId} className="sr-only">
+          {disabledReason}
+        </span>
+      )}
+      <button
+        aria-label={ariaLabel}
+        aria-describedby={isDisabled && disabledReason ? descId : undefined}
+        className={`${voteFor ? "btn-primary" : "btn-secondary"} focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900`}
+        disabled={isDisabled}
+        onClick={handleVote}
+        type="button"
+      >
+        {isThisVotePending
+          ? "Submitting..."
+          : voteFor
+            ? "Vote For"
+            : "Vote Against"}
+      </button>
+    </>
   );
 };

@@ -39,8 +39,31 @@ export const TreasuryCard: React.FC<TreasuryCardProps> = ({
       (addr) => addr.toLowerCase() === currentAddress.toLowerCase(),
     );
 
+  const approveDescId = `approve-desc-${txId}`;
+  const executeDescId = `execute-desc-${txId}`;
+
+  const approveDisabledReason = hasApproved
+    ? "You have already approved this transaction."
+    : !canSign
+      ? "You do not have signing permission for this treasury."
+      : isPendingApproval
+        ? "Approval is being confirmed on chain."
+        : undefined;
+
+  const executeDisabledReason = !canSign
+    ? "You do not have signing permission for this treasury."
+    : isPendingExecution
+      ? "Execution is being confirmed on chain."
+      : undefined;
+
   return (
     <div className="card p-5 group hover:border-primary-500/50 transition-colors">
+      {/* Live region announces pending action state changes to screen readers */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {isPendingApproval && "Approval transaction pending confirmation."}
+        {isPendingExecution && "Execution transaction pending confirmation."}
+      </div>
+
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="font-bold text-lg text-white">Transaction #{txId}</h3>
@@ -81,12 +104,21 @@ export const TreasuryCard: React.FC<TreasuryCardProps> = ({
       </div>
 
       <div className="pt-4 border-t border-stellar-border flex items-center justify-between">
-        <div className="flex flex-col gap-1">
+        {/* role="status" + aria-live announces approval count changes to screen readers */}
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label={`${approvals.length} of ${threshold} approvals required${isReadyToExecute ? ", threshold met" : ""}`}
+          className="flex flex-col gap-1"
+        >
           <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">
             Approvals
           </span>
           <div className="flex items-center gap-1.5">
-            <div className="h-1.5 w-24 bg-gray-800 rounded-full overflow-hidden">
+            <div
+              aria-hidden="true"
+              className="h-1.5 w-24 bg-gray-800 rounded-full overflow-hidden"
+            >
               <div
                 className={`h-full transition-all duration-500 ${isReadyToExecute ? "bg-green-500" : "bg-primary-500"
                   }`}
@@ -95,7 +127,7 @@ export const TreasuryCard: React.FC<TreasuryCardProps> = ({
                 }}
               />
             </div>
-            <span className="text-xs font-medium text-gray-300">
+            <span aria-hidden="true" className="text-xs font-medium text-gray-300">
               {approvals.length} / {threshold}
             </span>
           </div>
@@ -105,34 +137,56 @@ export const TreasuryCard: React.FC<TreasuryCardProps> = ({
           {!executed && (
             <>
               {isReadyToExecute ? (
-                <button
-                  className="btn-primary py-1.5 px-4 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onExecute?.(txId);
-                  }}
-                  disabled={!canSign || isPendingExecution}
-                >
-                  {isPendingExecution ? "Executing..." : "Execute"}
-                </button>
+                <>
+                  {executeDisabledReason && (
+                    <span id={executeDescId} className="sr-only">
+                      {executeDisabledReason}
+                    </span>
+                  )}
+                  <button
+                    aria-label={`Execute transaction #${txId}`}
+                    aria-describedby={executeDisabledReason ? executeDescId : undefined}
+                    className="btn-primary py-1.5 px-4 text-xs focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onExecute?.(txId);
+                    }}
+                    disabled={!canSign || isPendingExecution}
+                  >
+                    {isPendingExecution ? "Executing..." : "Execute"}
+                  </button>
+                </>
               ) : (
-                <button
-                  className={`py-1.5 px-4 text-xs rounded-lg font-medium transition-all ${hasApproved || !canSign
-                      ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                      : "bg-white/10 text-white hover:bg-white/20 border border-white/10"
-                    }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!hasApproved && canSign) onApprove?.(txId);
-                  }}
-                  disabled={hasApproved || !canSign || isPendingApproval}
-                >
-                  {isPendingApproval
-                    ? "Approving..."
-                    : hasApproved
-                      ? "Approved"
-                      : "Approve"}
-                </button>
+                <>
+                  {approveDisabledReason && (
+                    <span id={approveDescId} className="sr-only">
+                      {approveDisabledReason}
+                    </span>
+                  )}
+                  <button
+                    aria-label={
+                      hasApproved
+                        ? `Already approved transaction #${txId}`
+                        : `Approve transaction #${txId}`
+                    }
+                    aria-describedby={approveDisabledReason ? approveDescId : undefined}
+                    className={`py-1.5 px-4 text-xs rounded-lg font-medium transition-all focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${hasApproved || !canSign
+                        ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+                        : "bg-white/10 text-white hover:bg-white/20 border border-white/10"
+                      }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!hasApproved && canSign) onApprove?.(txId);
+                    }}
+                    disabled={hasApproved || !canSign || isPendingApproval}
+                  >
+                    {isPendingApproval
+                      ? "Approving..."
+                      : hasApproved
+                        ? "Approved"
+                        : "Approve"}
+                  </button>
+                </>
               )}
             </>
           )}
