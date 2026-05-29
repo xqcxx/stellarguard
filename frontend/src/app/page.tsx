@@ -6,6 +6,34 @@ import { useTreasury } from "@/hooks/useTreasury";
 import { useGovernance } from "@/hooks/useGovernance";
 import { formatXlm } from "@/lib/formatters";
 import { MetricCardSkeleton } from "@/components/Skeletons";
+import { LockKeyhole, ShieldCheck, UsersRound, Vote } from "lucide-react";
+
+const features = [
+  {
+    title: "Multi-Sig Treasury",
+    description:
+      "Configure approval thresholds. Require multiple signers to approve withdrawals. Full on-chain transparency.",
+    Icon: ShieldCheck,
+  },
+  {
+    title: "DAO Governance",
+    description:
+      "Create proposals, vote on fund allocation, and execute decisions with quorum-based finalization.",
+    Icon: Vote,
+  },
+  {
+    title: "Token Vesting",
+    description:
+      "Lock tokens with time-based release. Set cliff periods and vesting schedules for team allocations.",
+    Icon: LockKeyhole,
+  },
+  {
+    title: "Role-Based Access",
+    description:
+      "Owner, Admin, Member, and Viewer tiers. Granular permissions for every action in the platform.",
+    Icon: UsersRound,
+  },
+];
 
 export default function Home() {
   const { address } = useFreighter();
@@ -119,42 +147,21 @@ export default function Home() {
 
       {/* Features */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
-        <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-2">
-            🔐 Multi-Sig Treasury
-          </h3>
-          <p className="text-gray-400 text-sm">
-            Configure approval thresholds. Require multiple signers to approve
-            withdrawals. Full on-chain transparency.
-          </p>
-        </div>
-        <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-2">
-            🗳️ DAO Governance
-          </h3>
-          <p className="text-gray-400 text-sm">
-            Create proposals, vote on fund allocation, and execute decisions
-            with quorum-based finalization.
-          </p>
-        </div>
-        <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-2">
-            🔒 Token Vesting
-          </h3>
-          <p className="text-gray-400 text-sm">
-            Lock tokens with time-based release. Set cliff periods and vesting
-            schedules for team allocations.
-          </p>
-        </div>
-        <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-2">
-            👥 Role-Based Access
-          </h3>
-          <p className="text-gray-400 text-sm">
-            Owner, Admin, Member, and Viewer tiers. Granular permissions for
-            every action in the platform.
-          </p>
-        </div>
+        {features.map(({ title, description, Icon }) => (
+          <div className="card" key={title}>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-stellar-border/50 bg-stellar-primary/10 text-stellar-primary">
+                <Icon className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  {title}
+                </h3>
+                <p className="text-gray-400 text-sm">{description}</p>
+              </div>
+            </div>
+          </div>
+        ))}
       </section>
     </div>
   );
