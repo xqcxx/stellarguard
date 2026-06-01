@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { GovernanceProposalAction } from "@/lib/contractData";
 import { ACTION_DESCRIPTIONS } from "@/lib/contractData";
 import { isValidStellarAddress } from "@/lib/stellarAddress";
@@ -18,6 +18,14 @@ interface CreateProposalModalProps {
     target: string;
     amount: bigint;
   }) => Promise<void>;
+}
+
+const FOCUSABLE_SELECTORS =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function getFocusable(container: HTMLElement | null): HTMLElement[] {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS));
 }
 
 const ACTIONS: GovernanceProposalAction[] = [
@@ -45,6 +53,8 @@ export function CreateProposalModal({
   const TITLE_MAX = 100;
   const DESCRIPTION_MAX = 500;
   const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const openerRef = useRef<Element | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [action, setAction] = useState<GovernanceProposalAction>("General");
@@ -57,6 +67,16 @@ export function CreateProposalModal({
   const isTargetAddressValid = isValidStellarAddress(normalizedTarget);
 
   useEffect(() => {
+    if (isOpen) {
+      openerRef.current = document.activeElement;
+      const focusable = getFocusable(dialogRef.current);
+      focusable[0]?.focus();
+    } else {
+      (openerRef.current as HTMLElement | null)?.focus();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen) {
       return;
     }
@@ -64,6 +84,26 @@ export function CreateProposalModal({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !isCreating) {
         onClose();
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const focusable = getFocusable(dialogRef.current);
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!first || !last) return;
+
+        if (event.shiftKey) {
+          if (document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
       }
     };
 
@@ -203,6 +243,7 @@ export function CreateProposalModal({
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
