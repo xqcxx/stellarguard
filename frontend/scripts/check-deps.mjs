@@ -101,7 +101,8 @@ if (undeclared.length === 0) {
   console.warn(`⚠  Imported but not declared (${undeclared.length}):`);
   undeclared.forEach((p) => console.warn(`   - ${p}`));
 }
-
+console.log("\nVersion notes (run `npm outdated` for details):");
+console.log("\nVersion notes (run `npm outdated` for details):");
 console.log("\nVersion notes (run `npm outdated` for details):");
 console.log("  next              14.2.0   — latest major: 15.x (breaking changes; upgrade separately)");
 console.log("  @stellar/stellar-sdk ^11.3.0 — latest major: 15.x (upgrade separately after API review)");
