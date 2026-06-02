@@ -247,6 +247,21 @@ export default function GovernancePage() {
             ))}
           </select>
         </div>
+        <div className="flex flex-col justify-end gap-2">
+          {(statusFilter !== "All" || actionFilter !== "All" || sortKey !== "newest") && (
+            <button
+              onClick={() => {
+                setStatusFilter("All");
+                setActionFilter("All");
+                setSortKey("newest");
+              }}
+              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-gray-300 transition hover:bg-white/10 hover:text-white"
+              aria-label="Reset governance filters to defaults"
+            >
+              Reset filters
+            </button>
+          )}
+        </div>
         {error ? (
           <p className="text-sm text-red-400 md:col-span-4">
             {typeof error === "string" ? error : error.message}
